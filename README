@@ -1,0 +1,140 @@
+uts 0.14 -- 17 October 2001
+by Darius Bacon <darius@accesscom.com>
+http://www.accesscom.com/~darius
+
+See the file COPYING for copyright info.
+
+This is a very preliminary release of a Scheme bytecode interpreter.
+It works, and mostly conforms to the R4RS standard, but has few frills
+and poor documentation.  It's meant to be -- eventually -- 
+
+ - standard-conforming (probably following Scheme48 where it's necessary
+   to go beyond R4RS)
+
+ - small and quick to start up
+
+ - C-friendly
+
+ - well documented and easy to extend or embed.
+
+
+INSTALLATION
+
+This currently needs the Boehm garbage collector:
+
+http://www.hpl.hp.com/personal/Hans_Boehm/gc/
+# http://reality.sgi.com/employees/boehm_mti/gc_source/gc.tar.gz
+
+The makefile and sourcecode assume Boehm's gc.h and gc.a are in a
+subdirectory `gc' of this directory.
+
+The C code assumes two gcc extensions -- inline procedures and 64-bit
+long long ints.  It also assumes ints and longs are 32 bits.  See
+config.h.  A port to a different wordsize is likely to take more work
+than just fiddling with config.h, though.
+
+Finally, you need awk to generate some of the code.  There's no good
+reason for that at the moment, but I had an idea or two for the future
+that may make it handy.
+
+The makefile by default compiles a debugging version of the code with
+lots of assertions.  `makefast' compiles without the checks.  In fast
+mode, the system trusts the compiler to feed it legal bytecode
+programs.  (The default mode is much much slower than fast mode.)
+
+You can run the compiled code with 
+
+	./uts uts.fasl
+
+To use Aubrey Jaffer's slib, load slib.init after first setting the OS,
+library-vicinity, and implementation-vicinity variables in that file.
+
+To run a particular Scheme program from the shell, 
+
+	./uts uts.fasl -f foo.scm arg1 ... argn
+
+and the args are in a list @command-line-args.
+
+To rebuild uts.fasl from sources,
+
+	$ ./uts uts.fasl 
+	-> (load "write-fasl.scm")
+	-> (build-system "uts.scm" "uts.fasl")
+	-> 
+
+This only works if your OS doesn't distinguish text and binary files
+(as in Unix).  However, the C code loads the startup fasl as a binary
+file, so you can at least use the prebuilt uts.fasl even on
+braindamaged systems.
+
+Always typing ``./uts uts.fasl'' is kind of a pain, so I recommend
+changing the interpreter path at the top of uts.fasl to the location
+on your system of uts, then placing uts.fasl in your path somewhere
+under a name like `scheme'.
+
+
+KNOWN BUGS
+
+Ack!
+-> #x80000000
+80000000.
+
+Another one:
+-> #\\37777777703
+#\\
+-> 37777777703.
+
+Also, #\space32 should be scanned as two tokens -- #\space and 32.
+(Ugh -- I think I will retain this incompatibility unless I release
+this as something with pretensions to usefulness.)
+
+-> (case 42 ((42)))
+#t
+[is that a bug?]
+
+Most importantly, the global environment is full of implementation
+definitions like @EVAL and PARSE-FORM.  If your code redefines these,
+things are going to break.  What's worse, if you redefine a standard
+procedure like MAP, that can break the compiler too.  I started
+wrapping all the system code together, closing over the top-level
+variables needed and exporting only a few public definitions, but that
+was just too painful to maintain.  The top priority now is a real
+module system.
+
+Inexact numbers may not be read and written to full precision, since I
+rely on the standard C library.
+
+You need to (set! @open-code-primitives? #f) to keep many of the
+primitive procedures from being compiled inline.
+
+The FIXMEs in the C code cover the remaining stuff.
+
+
+FEATURES
+
+All the R4RS essential procedures are implemented, and some of the
+remaining ones.  The numeric tower has only small exact integers and
+double-length floats.  The macro appendix is unimplemented.
+
+After an error occurs, you can continue the computation with 
+(@proceed v) where v serves as the value of the offending expression.
+Or there's a simple debugger and disassembler you can use -- 
+enter (debug), then enter ? for help.  You can disassemble a
+procedure from outside the debugger with, for example, (dis +).
+
+It's possible to read and write fasl files like uts.fasl.
+(@read-fasl-header input-port) checks the header and advances past it.
+(@read-fasl input-port) returns the next object, or the eof object.
+dis-fasl.scm has an example.
+
+write-fasl.scm has corresponding output code.  For a machine startup
+file, you should write only code objects for 0-argument procedures, in
+the sequence they should be evaluated.  Get a code object with
+(@closure->code (lambda () exp)).  compile-file.scm is an example.
+
+(@system "ls") is like system("ls") is C.
+
+I hope some people enjoy playing with this system even in its current
+high-entropy state.  Bug reports, etc., are welcome.
+
+-Darius

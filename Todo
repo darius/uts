@@ -1,0 +1,166 @@
+; -*- Text -*-
+
+Release procedure:
+ - update version number in README and slib.init
+ - update date in README
+
+
+GC
+
+ - weak refs?
+ - smaller custom gc module
+   - much less code, hopefully
+   - combine object tags with allocator overhead
+   - special representations for the most common structures
+
+C Friendliness
+
+ - extensible type system
+   - try to keep 1-word overhead per object
+   - still fast, understandable to gc
+ - mechanism to add new primitive procs
+ - make all scheme procs available
+   - C name-mangling
+   - conventions for types of args/return value
+   - conventional namespace prefix
+ - what about SWIG?
+ - invoking interpreter from C
+   - dealing with continuations...
+
+Misc
+
+ - er, should quasiquote always create fresh structure?
+ - program-arguments in slib.init
+ - what's (compiler) in slib.init?
+ - iterative append
+ - write-char needs to flush().
+ - generic ports
+ - file ports hold onto their filename
+ - a make_string that takes address/count
+ - fix the ``double control-d to end'' problem
+ - it's dangerous having every atom not a number read as a symbol
+ - handle stack overflow gracefully -- spill to heap
+ - more efficient continuations
+ - macros
+ - source-location info optionally created by READ, used by error messages
+ - make Object an opaque pointer type
+ - how to get this working on 16-bit/64-bit systems?
+ - autogenerate the reified_cont_code, etc.
+ - combo of string_to_symbol and c_string might be handy
+ - with-fooput-to-file
+ - sigint catcher
+ - we have `fast' and `debug' versions of the C source, but there
+   should also be an in-between level of checking that's only 
+   suspicious of the compiler.  Maybe.
+ - review r4rs and check everything
+ - use gmp for the full numeric tower
+
+Error Handling
+
+ - always pass on all primitive args to error handler
+ - if this can get embedded in important programs like text editors,
+   we need to make sure it always fails gracefully.  Like if we're 
+   completely out of memory, fatal_error() doesn't cut it.  I'm not
+   sure what does.
+ - the code assumes it's impossible to have a vector or list length
+   that won't fit in a fixnum.  Better make sure.
+ - what about this:
+
+-> (close-output-port (current-output-port))
+Fatal error: Stack overflow
+
+   You could make any recursive error invocation fatal, but I think
+that's going too far.  Another solution in this case is to refuse to
+close that port...
+
+
+Module System
+
+Threads
+
+ - the error-trap interface currently uses global state...
+
+Code Cleanup
+
+ - you're sometimes using chars, sometimes unsigned chars...
+ - similarly with Fixnum -- and int isn't necessarily 32 bits
+ - stop assuming ints and longs are the same
+ - comments and overview
+ - vm
+   - break into modules?
+ - compiler/library
+
+Debugger
+
+ - @error should be a byte-op, so it can be inlined, so that we don't
+   normally have a tail call to the @error procedure, losing the context
+ - nested break-levels
+ - inspect arbitrary structures
+ - eval an expression
+ - better env display
+ - have tracebacks show args
+ - print-width, print-depth settings
+ - a (break) procedure to go with (error)
+ - tracing, stepping, advising?
+ - source code info
+ - reverse execution, algorithmic debugging (dream on)
+
+Profiling
+
+ - for internals
+ - for user
+ - see if Boehm gc gives stats
+
+Efficiency
+
+ - fasl format
+   - collect symbols at the beginning
+   - replace B (boolean) tag with T/F
+   - replace for startup with a static heap?
+
+ - vm code
+   - tune the Boehm gc interface
+   - keep top of stack in a register
+   - increment pc just once per instruction
+   - use pointers instead of indices for stack_ptr, etc?
+   - combine adjacent check_type's?
+   - don't pop off the last argument in prim instructions;
+     use set_top() instead, and drop() on error or callout.
+
+ - vm architecture
+   - make READ into a primitive
+   - explicit stack overflow checking in extend-env, etc.
+   - specialize %varref for 0 0, 0 1, etc.
+   - specialize %lit for common operands
+     - such as -1 0 1 2 #t #f () 0.0 "" #!unspecified #()
+   - one-byte primitive invocations
+   - get rid of %save, use a %call and %tail-call instead
+     - be careful about how that affects stack inspection
+       for debugging & error recovery
+   - 1-byte jump offsets
+   - constants vector should be a subrange of the code vector,
+     instead of separate.
+   - %stack-ref (may obviate the above %varref optimization)
+     - also needs arg-count checking without extending the env,
+       and more compiler support
+   - auto-combine/specialize ops by static profile a la Proebsting
+   - share constants vectors?
+   - share closures?
+   - instructions for letrec?
+   - explicit typechecks?
+   - primitives to help speed up running the compiler...
+   - combine invoke and extend-foo-env
+   - avoid argcount checking in calls to known procs
+
+ - compiler code generated
+   - optimize out ((lambda () ...))
+   - optimize ((lambda (arg*) ...) exp*)
+     - do we need new opcodes, or is extend-normal-env okay?
+       Hm, we do.
+   - stack-allocate environments sometimes (see %stack-ref above)
+   - inline functions
+   - complete rewrite.  twobit looks nice.
+
+ - compile-time efficiency
+   - use an accumulator in parsing definitions
+   - macroexpansion by calling code-gen functions instead of rewriting
