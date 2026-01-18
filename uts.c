@@ -10,6 +10,7 @@
 /* #include <assert.h> */
 #include <ctype.h>
 #include <errno.h>
+#include <limits.h>
 #include <math.h>
 #include <setjmp.h>
 #include <stdio.h>
@@ -76,16 +77,11 @@ object_bits (Object obj)
 }
 
 
-static void 
+static void
 fatal_error (const char *message)
 {
   fprintf (stderr, "Fatal error: %s\n", message);
-
-#ifndef NDEBUG
-  *(int*)NULL = 0;		/* cause segfault to invoke gdb */
-#endif
-
-  exit (1);
+  __builtin_trap ();
 }
 
 static void 
@@ -182,7 +178,7 @@ fast Char char_value (Object obj)    { assert (is_char (obj));
 				       return object_bits (obj) >> 4; }
 
 fast Object make_fixnum (Fixnum n)   { assert (int_is_fixnum (n));
-                                       return (Object) (((Word)n << 2) | 0x01); }
+                                       return (Object) (((UWord)n << 2) | 0x01); }
 fast Fixnum fixnum_value (Object obj){ assert (is_fixnum (obj));
 				       return ashr2 (object_bits (obj)); }
 
@@ -1319,13 +1315,13 @@ as_double (Object n)
 static int
 as_int (Object n)
 {
-  if (is_flonum (n)) 
+  if (is_flonum (n))
     {
       double d = flonum_value (n);
-      int i = d;
-      if (i != d)
+      /* Check range before casting to avoid UB */
+      if (d < INT_MIN || d > INT_MAX || d != floor(d))
 	vm_error ("Not an integer", n);
-      return i;
+      return (int) d;
     }
   if (!is_fixnum (n))
     type_error (n);
@@ -1915,17 +1911,19 @@ prim_read_fasl (Object x0)
 
 static Object
 expt (Object x1, Object x0)
-{ 
+{
   if (is_fixnum (x1) && is_fixnum (x0)) {
     double p = pow (fixnum_value (x1), fixnum_value (x0));
-    Fixnum i = (Fixnum) p;
-    if (int_is_fixnum (i) && p == i)
-      return make_fixnum (i);
-    else 
-      return make_flonum (p);
-  } else 
-    return make_flonum (pow (as_double (x1), 
-			     as_double (x0))); 
+    /* Check range before casting to avoid UB */
+    if (p >= FIXNUM_MIN && p <= FIXNUM_MAX) {
+      Fixnum i = (Fixnum) p;
+      if (p == i)
+        return make_fixnum (i);
+    }
+    return make_flonum (p);
+  } else
+    return make_flonum (pow (as_double (x1),
+			     as_double (x0)));
 }
 
 static Object

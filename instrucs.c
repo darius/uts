@@ -326,17 +326,17 @@ p1_exactTOinexact:
 		    vm_type_error (x0); }
 p1_inexactTOexact:
     {
-      if (is_flonum (x0)) 
+      if (is_flonum (x0))
 	{
 	  /* R4RS doesn't say how to round 0.5 here; this is convenient: */
 	  double d = floor (flonum_value (x0) + 0.5);
-	  if (d + 1 < FIXNUM_MIN || FIXNUM_MAX < d - 1) 
+	  if (d < FIXNUM_MIN || d > FIXNUM_MAX)
 	    {
 	      acc = x0;
 	      error_msg = "No exact number corresponding to";
 	      goto vm_error_label;
 	    }
-	  acc = make_fixnum ((Fixnum) flonum_value (x0));
+	  acc = make_fixnum ((Fixnum) d);
 	}
       else if (is_fixnum (x0))
 	acc = x0;
