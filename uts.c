@@ -1661,21 +1661,20 @@ read_unsigned16 (FILE *in)
   return (u1 << 8) + u0;
 }
 
-static int
-read_int16 (FILE *in)
-{
-  int u1 = read_unsigned8 (in);
-  int u0 = read_unsigned8 (in);
-  return (u1 << 8) + u0 - 32768;
-}
-
 static int64_t
-read_int64 (FILE *in)
+read_int (FILE *in)
 {
-  int64_t result = 0;
-  for (int i = 0; i < 8; i++)
-    result = (result << 8) | read_unsigned8 (in);
-  return result;
+  /* 7-bit varint with zigzag decoding */
+  uint64_t u = 0;
+  int shift = 0;
+  int byte;
+  do {
+    byte = read_unsigned8 (in);
+    u |= (uint64_t)(byte & 0x7f) << shift;
+    shift += 7;
+  } while (byte & 0x80);
+  /* zigzag decode: 0->0, 1->-1, 2->1, 3->-2, ... */
+  return (u >> 1) ^ -(int64_t)(u & 1);
 }
 
 /* RECOVERABLE */
@@ -1705,7 +1704,7 @@ read_fasl_header (FILE *in)
 static Object 
 undump_string (FILE *in)
 {
-  int i, n = read_int16 (in);	/* unsigned16 instead? */
+  int i, n = read_int (in);	/* unsigned16 instead? */
   Object str = make_string (n);
   unsigned char *s = string_ptr (str);
   for (i = 0; i < n; ++i)
@@ -1769,7 +1768,7 @@ read_fasl (FILE *in)
 	  break;
 	case 'V': 
 	  {
-	    int i, n = read_int16 (in);
+	    int i, n = read_int (in);
 	    Object vec = make_vector (n, nil);
 	    Object *v = vector_ptr (vec);
 	    for (i = 0; i < n; ++i)
@@ -1790,7 +1789,7 @@ read_fasl (FILE *in)
 	  break;
 	case 'Y': 
 	  {
-	    int i, n = read_int16 (in);
+	    int i, n = read_int (in);
 	    Object str = make_string (n);
 	    unsigned char *s = string_ptr (str);
 	    for (i = 0; i < n; ++i)
@@ -1802,7 +1801,7 @@ read_fasl (FILE *in)
 	  PUSH (nil);
 	  break;
 	case 'I':
-	  PUSH (make_fixnum (read_int64 (in)));
+	  PUSH (make_fixnum (read_int (in)));
 	  break;
 	case 'B': 
 	  {			/* simpler to have separate codes for #t/#f */

@@ -46,19 +46,17 @@
       ((string? obj)      #\S)
       ((char? obj)        #\C)
       (else (@error "Undumpable" obj))))
-  (define (dump-int16 n)
-    (let ((u (+ n 32768)))
-      (write-char (integer->char (quotient u 256)) port)
-      (write-char (integer->char (remainder u 256)) port)))
-  (define (dump-int64 n)
-    ;; 64-bit signed integer, big-endian
-    (let ((u (if (< n 0) (+ n 18446744073709551616) n)))
-      (let loop ((i 8) (v u) (bytes '()))
-        (if (= i 0)
-            (for-each (lambda (b) (write-char (integer->char b) port)) bytes)
-            (loop (- i 1) (quotient v 256) (cons (remainder v 256) bytes))))))
+  (define (dump-int n)
+    ;; Signed integer via zigzag + 7-bit variable-length encoding
+    ;; zigzag: 0->0, -1->1, 1->2, -2->3, 2->4, ...
+    (let loop ((n (if (< n 0) (- (* -2 n) 1) (* 2 n))))
+      (if (< n 128)
+          (write-char (integer->char n) port)
+          (begin
+            (write-char (integer->char (+ 128 (remainder n 128))) port)
+            (loop (quotient n 128))))))
   (define (dump-string str)
-    (dump-int16 (string-length str))
+    (dump-int (string-length str))
     (display str port))
 
   (let recur ((obj obj))
@@ -82,14 +80,14 @@
 		(recur (vector-ref obj i))
 		(loop (- i 1)))))
        (write-char (tag obj) port)
-       (dump-int16 (vector-length obj)))
+       (dump-int (vector-length obj)))
       (else
         (let ((obj-tag (tag obj)))
 	  (write-char obj-tag port)
 	  (case obj-tag
 	    ((#\Y) (dump-string (symbol->string obj)))
 	    ((#\U) 'ignore)
-	    ((#\I) (dump-int64 obj))
+	    ((#\I) (dump-int obj))
 	    ((#\B) (write-char (if obj #\t #\f) port))
 	    ((#\S) (dump-string obj))
 	    ((#\C) (write-char obj port))
