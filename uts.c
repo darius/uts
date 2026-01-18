@@ -33,18 +33,14 @@ typedef enum
 Tag;
 
 
-typedef int Fixnum;     /* this should be one machine word */
-typedef unsigned char Char;	/* not using this everywhere... */
-
-#define FIXNUM_MIN   (-(1L << 29))
-#define FIXNUM_MAX   ((1L << 29) - 1)
-#define FIXNUM_MASK  FIXNUM_MAX
+/* Fixnum, FIXNUM_MIN, FIXNUM_MAX, FIXNUM_MASK defined in config.h */
+typedef unsigned char Char;
 
 fast Flag
-int_is_fixnum (int i)
-{  /* try to find a better way later */
-  /* TODO: use unsigned comparison */
-  return FIXNUM_MIN <= i && i <= FIXNUM_MAX;
+int_is_fixnum (Fixnum i)
+{
+  /* Unsigned comparison trick: (i - MIN) <= (MAX - MIN) */
+  return (UWord)(i - FIXNUM_MIN) <= (UWord)(FIXNUM_MAX - FIXNUM_MIN);
 }
 
 
@@ -73,10 +69,10 @@ typedef Object_header *Object;  /* A Scheme datum, or pointer thereto.
    directly following the header in memory.
 */
 
-fast uintptr_t
+fast UWord
 object_bits (Object obj)
 {
-  return (uintptr_t) obj;
+  return (UWord) obj;
 }
 
 
@@ -181,14 +177,14 @@ fast Flag is_fixnum (Object obj)    {return (object_bits (obj) & 0x03) == 0x01;}
 fast Flag is_true (Object obj)       { return obj != obj_false; }
 fast Object make_boolean (Flag flag) { return flag ? obj_true : obj_false; }
 
-fast Object make_char (Char c)       { return (Object) ((uintptr_t)(c << 4) | 0x03); }
+fast Object make_char (Char c)       { return (Object) (((UWord)c << 4) | 0x03); }
 fast Char char_value (Object obj)    { assert (is_char (obj));
 				       return object_bits (obj) >> 4; }
 
 fast Object make_fixnum (Fixnum n)   { assert (int_is_fixnum (n));
-                                       return (Object) ((intptr_t)(n << 2) | 0x01); }
+                                       return (Object) (((Word)n << 2) | 0x01); }
 fast Fixnum fixnum_value (Object obj){ assert (is_fixnum (obj));
-				       return ashr2 ((intptr_t)object_bits (obj)); }
+				       return ashr2 (object_bits (obj)); }
 
 
 fast Flag is_input_port (Object obj) { return is_boxed (obj)
@@ -218,7 +214,7 @@ is_number (Object obj)
 fast Flag
 is_natnum (Object obj)
 {   /* tag trickery */ 
-  return (object_bits (obj) & (highbit | 0x03)) == 0x01;
+  return (object_bits (obj) & (WORD_HIGHBIT | 0x03)) == 0x01;
 }
 
 
@@ -1189,12 +1185,12 @@ scan_real_done:
   }
 }
 
-/* Pre: buffer is big enough to hold any n converted in radix, 
+/* Pre: buffer is big enough to hold any n converted in radix,
         and 2 <= radix <= 36. */
 static void
-unparse_int (char *buffer, int n, unsigned radix)
+unparse_int (char *buffer, Fixnum n, unsigned radix)
 {
-  unsigned u = n < 0 ? -n : n;
+  uint32_t u = n < 0 ? -n : n;
   if (n < 0)
     *buffer++ = '-';
   {
@@ -1379,8 +1375,8 @@ modulo (Object n, Object d)
       if (fixnum_value (d) == 0)
 	division_by_zero ();
       {
-	int dv = fixnum_value (d);
-	int r = REMAINDER (fixnum_value (n), dv);
+	Fixnum dv = fixnum_value (d);
+	Fixnum r = REMAINDER (fixnum_value (n), dv);
 	if (dv < 0 ? 0 < r : r < 0)
 	  r += dv;
 	return int_is_fixnum (r) ? make_fixnum (r) : make_flonum (r);
@@ -1405,7 +1401,7 @@ my_remainder (Object n, Object d)
       if (fixnum_value (d) == 0)
 	division_by_zero ();
       {
-	int r = REMAINDER (fixnum_value (n), fixnum_value (d));
+	Fixnum r = REMAINDER (fixnum_value (n), fixnum_value (d));
 	return int_is_fixnum (r) ? make_fixnum (r) : make_flonum (r);
       }
     }
@@ -1426,7 +1422,7 @@ quotient (Object n, Object d)
       if (fixnum_value (d) == 0)
 	division_by_zero ();
       {
-	int r = QUOTIENT (fixnum_value (n), fixnum_value (d));
+	Fixnum r = QUOTIENT (fixnum_value (n), fixnum_value (d));
 	return int_is_fixnum (r) ? make_fixnum (r) : make_flonum (r);
       }
     }
@@ -1442,15 +1438,15 @@ quotient (Object n, Object d)
 static Object 
 multiply (Object n1, Object n2)
 {
-  if (is_fixnum (n1) && is_fixnum (n2)) 
+  if (is_fixnum (n1) && is_fixnum (n2))
     {
-      int i1 = fixnum_value (n1), i2 = fixnum_value (n2);
-      int64 product = (int64) i1 * (int64) i2;
-      int ip = product;
-      if (product == (int64) ip && int_is_fixnum (ip))
+      Fixnum i1 = fixnum_value (n1), i2 = fixnum_value (n2);
+      int64_t product = (int64_t) i1 * (int64_t) i2;
+      Fixnum ip = (Fixnum) product;
+      if (product == (int64_t) ip && int_is_fixnum (ip))
 	return make_fixnum (ip);
       else
-	return make_flonum (product);
+	return make_flonum ((double) product);
     } else
       return make_flonum (as_double (n1) * as_double (n2));
 }
@@ -1922,9 +1918,9 @@ expt (Object x1, Object x0)
 { 
   if (is_fixnum (x1) && is_fixnum (x0)) {
     double p = pow (fixnum_value (x1), fixnum_value (x0));
-    int i = (int) p;
+    Fixnum i = (Fixnum) p;
     if (int_is_fixnum (i) && p == i)
-      return make_fixnum ((int) p);
+      return make_fixnum (i);
     else 
       return make_flonum (p);
   } else 

@@ -1,0 +1,12 @@
+# Build artifacts
+uts
+uts_opt
+instruc-cases.c
+*.o
+*.dSYM/
+
+# Boehm GC (built from source)
+gc/
+
+# macOS
+.DS_Store

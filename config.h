@@ -4,24 +4,41 @@
 #define FASL_STACK_SIZE 1000
 
 
-/* Implementation dependent things */
+/*
+ * Portable type definitions
+ *
+ * Word/UWord: pointer-sized integers for tagged pointer manipulation
+ * Fixnum: the integer type stored in tagged pointers (currently 30-bit)
+ */
 
-#define int32 		int
-#define unsigned32 	unsigned int
-#define int64		long long int
-
-/* Use intptr_t for pointer-sized integers */
 #include <stdint.h>
-#define WORD_BITS	(sizeof(void*) * 8)
-#define highbit		(1UL << (WORD_BITS - 1))
 
-#define ashr2(i)	((intptr_t)(i) >> 2)
+typedef intptr_t  Word;      /* signed pointer-sized integer */
+typedef uintptr_t UWord;     /* unsigned pointer-sized integer */
+typedef int32_t   Fixnum;    /* integer value in tagged fixnums */
 
-#define QUOTIENT(n,d)	((n) / (d))
-#define REMAINDER(n,d)	((n) % (d))
+#define WORD_BITS    (sizeof(Word) * 8)
+#define WORD_HIGHBIT ((UWord)1 << (WORD_BITS - 1))
+
+/* Fixnum range: 2 tag bits, so 30 bits of value on 32-bit, 62 bits on 64-bit.
+ * For now, keep 30-bit fixnums for fasl compatibility. */
+#define FIXNUM_BITS  30
+#define FIXNUM_MIN   (-(1L << (FIXNUM_BITS - 1)))
+#define FIXNUM_MAX   ((1L << (FIXNUM_BITS - 1)) - 1)
+#define FIXNUM_MASK  FIXNUM_MAX
+
+/* Arithmetic right shift by 2 (for extracting fixnum value) */
+#define ashr2(w)     ((Word)(w) >> 2)
+
+/* Integer division - C99 specifies truncation toward zero */
+#define QUOTIENT(n,d)   ((n) / (d))
+#define REMAINDER(n,d)  ((n) % (d))
 
 #define UNPARSED_FLONUM_SIZE 1024
 
-#define fast 		static inline
+#define fast static inline
 
-/* maybe something about signed vs. unsigned chars here? */
+/* Legacy type aliases - to be removed */
+#define int32      int32_t
+#define unsigned32 uint32_t
+#define int64      int64_t

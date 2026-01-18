@@ -523,10 +523,10 @@ p2_ADD:
       if (is_fixnum (x1) && is_fixnum (x0)) 
 	{
 				/* tag trickery */
-	  intptr_t b1 = (intptr_t) object_bits (x1), b0 = (intptr_t) object_bits (x0);
-	  intptr_t sum = b1 + b0 - 0x01;
-	  intptr_t bitdiff = b1 ^ b0;
-	  if (((bitdiff | ~(bitdiff | (sum ^ b0))) & highbit) != 0)
+	  Word b1 = (Word) object_bits (x1), b0 = (Word) object_bits (x0);
+	  Word sum = b1 + b0 - 0x01;
+	  Word bitdiff = b1 ^ b0;
+	  if (((bitdiff | ~(bitdiff | (sum ^ b0))) & WORD_HIGHBIT) != 0)
 	    acc = (Object) sum;
 	  else
 	    acc = make_flonum (ashr2 (b1) + ashr2 (b0));
@@ -544,9 +544,9 @@ p2_SUB:
     {
       if (is_fixnum (x1) && is_fixnum (x0)) 
 	{                        /* tag trickery */
-	  intptr_t b1 = (intptr_t) object_bits (x1), b0 = (intptr_t) object_bits (x0);
-	  intptr_t d = b1 - b0 + 0x01;
-	  if (((b1 ^ b0) & (b1 ^ d) & highbit) == 0)
+	  Word b1 = (Word) object_bits (x1), b0 = (Word) object_bits (x0);
+	  Word d = b1 - b0 + 0x01;
+	  if (((b1 ^ b0) & (b1 ^ d) & WORD_HIGHBIT) == 0)
 	    acc = (Object) d;
 	  else
 	    acc = make_flonum (ashr2 (b1) - ashr2 (b0));
@@ -567,7 +567,7 @@ p2_LT:
     {
       if (is_fixnum (x1) && is_fixnum (x0))
 	/* tag trickery */
-	acc = make_boolean ((intptr_t) object_bits (x1) < (intptr_t) object_bits (x0));
+	acc = make_boolean ((Word) object_bits (x1) < (Word) object_bits (x0));
       else 
 	{
 	  double d1, d0;
@@ -581,7 +581,7 @@ p2_LE:
     {
       if (is_fixnum (x1) && is_fixnum (x0))
 	/* tag trickery */
-	acc = make_boolean ((intptr_t) object_bits (x1) <= (intptr_t) object_bits (x0));
+	acc = make_boolean ((Word) object_bits (x1) <= (Word) object_bits (x0));
       else 
 	{
 	  double d1, d0;
@@ -595,7 +595,7 @@ p2_EQ:
     {
       if (is_fixnum (x1) && is_fixnum (x0))
 	/* tag trickery */
-	acc = make_boolean ((intptr_t) object_bits (x1) == (intptr_t) object_bits (x0));
+	acc = make_boolean ((Word) object_bits (x1) == (Word) object_bits (x0));
       else 
 	{
 	  double d1, d0;
