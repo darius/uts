@@ -48,11 +48,14 @@ int_is_fixnum (int i)
 }
 
 
-typedef struct Object_header 
+typedef struct Object_header
   {
     unsigned size      :29;
     unsigned tag       : 3;   /* if any more types, have to expand to 4 bits */
-  } 
+#if __SIZEOF_POINTER__ > 4
+    unsigned _pad;            /* padding for 64-bit alignment */
+#endif
+  }
 Object_header;
 
 typedef Object_header *Object;  /* A Scheme datum, or pointer thereto.
@@ -70,10 +73,10 @@ typedef Object_header *Object;  /* A Scheme datum, or pointer thereto.
    directly following the header in memory.
 */
 
-fast unsigned 
+fast uintptr_t
 object_bits (Object obj)
 {
-  return (unsigned) obj;
+  return (uintptr_t) obj;
 }
 
 
@@ -178,14 +181,14 @@ fast Flag is_fixnum (Object obj)    {return (object_bits (obj) & 0x03) == 0x01;}
 fast Flag is_true (Object obj)       { return obj != obj_false; }
 fast Object make_boolean (Flag flag) { return flag ? obj_true : obj_false; }
 
-fast Object make_char (Char c)       { return (Object) ((c << 4) | 0x03); }
-fast Char char_value (Object obj)    { assert (is_char (obj)); 
+fast Object make_char (Char c)       { return (Object) ((uintptr_t)(c << 4) | 0x03); }
+fast Char char_value (Object obj)    { assert (is_char (obj));
 				       return object_bits (obj) >> 4; }
 
 fast Object make_fixnum (Fixnum n)   { assert (int_is_fixnum (n));
-                                       return (Object) ((n << 2) | 0x01); }
+                                       return (Object) ((intptr_t)(n << 2) | 0x01); }
 fast Fixnum fixnum_value (Object obj){ assert (is_fixnum (obj));
-				       return ashr2 ((int)object_bits (obj)); }
+				       return ashr2 ((intptr_t)object_bits (obj)); }
 
 
 fast Flag is_input_port (Object obj) { return is_boxed (obj)
@@ -467,8 +470,8 @@ eqv (Object obj1, Object obj2)
        && flonum_value (obj1) == flonum_value (obj2));
 }
 
-static double 
-round (double x)
+static double
+my_round (double x)
 {
   double ignore, i, f = modf (x, &i);
   if (f < 0) 

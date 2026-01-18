@@ -10,9 +10,12 @@
 #define unsigned32 	unsigned int
 #define int64		long long int
 
-#define highbit		(1 << 31)
+/* Use intptr_t for pointer-sized integers */
+#include <stdint.h>
+#define WORD_BITS	(sizeof(void*) * 8)
+#define highbit		(1UL << (WORD_BITS - 1))
 
-#define ashr2(i)	((i) >> 2)
+#define ashr2(i)	((intptr_t)(i) >> 2)
 
 #define QUOTIENT(n,d)	((n) / (d))
 #define REMAINDER(n,d)	((n) % (d))

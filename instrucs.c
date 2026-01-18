@@ -312,7 +312,7 @@ p1_floor:	{ if (is_flonum (x0))
                   else 
 		    vm_type_error (x0); }
 p1_round: 	{ if (is_flonum (x0))
-                    acc = make_flonum (round (flonum_value (x0)));
+                    acc = make_flonum (my_round (flonum_value (x0)));
                   else if (is_fixnum (x0))
                     acc = x0;
 		  else
@@ -523,9 +523,9 @@ p2_ADD:
       if (is_fixnum (x1) && is_fixnum (x0)) 
 	{
 				/* tag trickery */
-	  int b1 = (int) object_bits (x1), b0 = (int) object_bits (x0);
-	  int sum = b1 + b0 - 0x01;
-	  int bitdiff = b1 ^ b0;
+	  intptr_t b1 = (intptr_t) object_bits (x1), b0 = (intptr_t) object_bits (x0);
+	  intptr_t sum = b1 + b0 - 0x01;
+	  intptr_t bitdiff = b1 ^ b0;
 	  if (((bitdiff | ~(bitdiff | (sum ^ b0))) & highbit) != 0)
 	    acc = (Object) sum;
 	  else
@@ -544,8 +544,8 @@ p2_SUB:
     {
       if (is_fixnum (x1) && is_fixnum (x0)) 
 	{                        /* tag trickery */
-	  int b1 = (int) object_bits (x1), b0 = (int) object_bits (x0);
-	  int d = b1 - b0 + 0x01;
+	  intptr_t b1 = (intptr_t) object_bits (x1), b0 = (intptr_t) object_bits (x0);
+	  intptr_t d = b1 - b0 + 0x01;
 	  if (((b1 ^ b0) & (b1 ^ d) & highbit) == 0)
 	    acc = (Object) d;
 	  else
@@ -567,7 +567,7 @@ p2_LT:
     {
       if (is_fixnum (x1) && is_fixnum (x0))
 	/* tag trickery */
-	acc = make_boolean ((int) object_bits (x1) < (int) object_bits (x0));
+	acc = make_boolean ((intptr_t) object_bits (x1) < (intptr_t) object_bits (x0));
       else 
 	{
 	  double d1, d0;
@@ -581,7 +581,7 @@ p2_LE:
     {
       if (is_fixnum (x1) && is_fixnum (x0))
 	/* tag trickery */
-	acc = make_boolean ((int) object_bits (x1) <= (int) object_bits (x0));
+	acc = make_boolean ((intptr_t) object_bits (x1) <= (intptr_t) object_bits (x0));
       else 
 	{
 	  double d1, d0;
@@ -595,7 +595,7 @@ p2_EQ:
     {
       if (is_fixnum (x1) && is_fixnum (x0))
 	/* tag trickery */
-	acc = make_boolean ((int) object_bits (x1) == (int) object_bits (x0));
+	acc = make_boolean ((intptr_t) object_bits (x1) == (intptr_t) object_bits (x0));
       else 
 	{
 	  double d1, d0;
