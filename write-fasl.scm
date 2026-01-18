@@ -1,9 +1,5 @@
 ;;;;
 ;;;; Writing fasl files.
-;;;; This stuff is off in a separate file for two reasons:
-;;;; - you don't normally need it
-;;;; - some of the integer constants in the source are themselves too
-;;;;   big for the fasl format 
 ;;;; 
 
 (define interpreter-path "/home/me/src/scm/uts/uts")
@@ -50,16 +46,19 @@
       ((string? obj)      #\S)
       ((char? obj)        #\C)
       (else (@error "Undumpable" obj))))
-  (define (dump-integer n)
-    (if (and (integer? n) 
-	     (<= -32768 n) 
-	     (<= n 32767))
-	(let ((u (+ n 32768)))
-	  (write-char (integer->char (quotient u 256)) port)
-	  (write-char (integer->char (remainder u 256)) port))
-	(@error "Undumpable" n)))
+  (define (dump-int16 n)
+    (let ((u (+ n 32768)))
+      (write-char (integer->char (quotient u 256)) port)
+      (write-char (integer->char (remainder u 256)) port)))
+  (define (dump-int64 n)
+    ;; 64-bit signed integer, big-endian
+    (let ((u (if (< n 0) (+ n 18446744073709551616) n)))
+      (let loop ((i 8) (v u) (bytes '()))
+        (if (= i 0)
+            (for-each (lambda (b) (write-char (integer->char b) port)) bytes)
+            (loop (- i 1) (quotient v 256) (cons (remainder v 256) bytes))))))
   (define (dump-string str)
-    (dump-integer (string-length str))
+    (dump-int16 (string-length str))
     (display str port))
 
   (let recur ((obj obj))
@@ -83,14 +82,14 @@
 		(recur (vector-ref obj i))
 		(loop (- i 1)))))
        (write-char (tag obj) port)
-       (dump-integer (vector-length obj)))
+       (dump-int16 (vector-length obj)))
       (else
         (let ((obj-tag (tag obj)))
 	  (write-char obj-tag port)
 	  (case obj-tag
 	    ((#\Y) (dump-string (symbol->string obj)))
 	    ((#\U) 'ignore)
-	    ((#\I) (dump-integer obj))
+	    ((#\I) (dump-int64 obj))
 	    ((#\B) (write-char (if obj #\t #\f) port))
 	    ((#\S) (dump-string obj))
 	    ((#\C) (write-char obj port))

@@ -1155,18 +1155,18 @@ scan_real_done:
      should understand -- now let's convert it.  Obviously this won't
      be R4RS compliant unless strtod() happens to be.  (Ha!) */
 
-  if (is_exact || radix != 10) 
+  if (is_exact || radix != 10)
     {
       char *end;
-      long i = (errno = 0, i = strtol (buffer, &end, radix));
+      long long i = (errno = 0, strtoll (buffer, &end, radix));
       if (errno == 0 && *end == '\0')
-	{ 
+	{
 	  if (int_is_fixnum (i) && is_exact)
 	    return make_fixnum (i);
 	  else if (saw_exactness_prefix && is_exact)
 	    return obj_false;
 	  else
-	    return make_flonum (i);
+	    return make_flonum ((double) i);
 	}
       if (saw_exactness_prefix && is_exact || radix != 10)
 	return obj_false;
@@ -1186,25 +1186,25 @@ scan_real_done:
 static void
 unparse_int (char *buffer, Fixnum n, unsigned radix)
 {
-  uint32_t u = n < 0 ? -n : n;
+  uint64_t u = n < 0 ? -(uint64_t)n : (uint64_t)n;
   if (n < 0)
     *buffer++ = '-';
   {
-    char stack[32], *sp = stack + 32;
+    char stack[65], *sp = stack + 65;
 
     /* First compute the digits in reverse order: */
     if (u == 0)
       *--sp = '0';
-    else 
-      for (; u != 0; u /= radix) 
+    else
+      for (; u != 0; u /= radix)
 	{
 	  unsigned digit = u % radix;
 	  *--sp = (digit < 10 ? '0' + digit : 'A' - 10 + digit);
 	}
 
     /* Now stick them in the buffer: */
-    memcpy (buffer, sp, (stack + 32) - sp);
-    buffer [(stack + 32) - sp] = '\0';
+    memcpy (buffer, sp, (stack + 65) - sp);
+    buffer [(stack + 65) - sp] = '\0';
   }
 }
 
@@ -1431,16 +1431,15 @@ quotient (Object n, Object d)
 }
 
 /* RECOVERABLE */
-static Object 
+static Object
 multiply (Object n1, Object n2)
 {
   if (is_fixnum (n1) && is_fixnum (n2))
     {
       Fixnum i1 = fixnum_value (n1), i2 = fixnum_value (n2);
-      int64_t product = (int64_t) i1 * (int64_t) i2;
-      Fixnum ip = (Fixnum) product;
-      if (product == (int64_t) ip && int_is_fixnum (ip))
-	return make_fixnum (ip);
+      __int128 product = (__int128) i1 * (__int128) i2;
+      if (product >= FIXNUM_MIN && product <= FIXNUM_MAX)
+	return make_fixnum ((Fixnum) product);
       else
 	return make_flonum ((double) product);
     } else
@@ -1499,7 +1498,7 @@ put_object (FILE *file, Object obj, Flag displaying)
     {
       if (is_fixnum (obj))
 	{
-	  if (fprintf (file, "%d", fixnum_value (obj)) < 0)
+	  if (fprintf (file, "%lld", (long long) fixnum_value (obj)) < 0)
 	    io_error (errno);
 	}
       else if (is_null (obj))
@@ -1662,7 +1661,7 @@ read_unsigned16 (FILE *in)
   return (u1 << 8) + u0;
 }
 
-static int 
+static int
 read_int16 (FILE *in)
 {
   int u1 = read_unsigned8 (in);
@@ -1670,8 +1669,17 @@ read_int16 (FILE *in)
   return (u1 << 8) + u0 - 32768;
 }
 
+static int64_t
+read_int64 (FILE *in)
+{
+  int64_t result = 0;
+  for (int i = 0; i < 8; i++)
+    result = (result << 8) | read_unsigned8 (in);
+  return result;
+}
+
 /* RECOVERABLE */
-static void 
+static void
 read_fasl_header (FILE *in)
 {
   /* Skip (required) Unix #! line */
@@ -1794,7 +1802,7 @@ read_fasl (FILE *in)
 	  PUSH (nil);
 	  break;
 	case 'I':
-	  PUSH (make_fixnum (read_int16 (in)));
+	  PUSH (make_fixnum (read_int64 (in)));
 	  break;
 	case 'B': 
 	  {			/* simpler to have separate codes for #t/#f */
@@ -1914,10 +1922,13 @@ expt (Object x1, Object x0)
 {
   if (is_fixnum (x1) && is_fixnum (x0)) {
     double p = pow (fixnum_value (x1), fixnum_value (x0));
-    /* Check range before casting to avoid UB */
-    if (p >= FIXNUM_MIN && p <= FIXNUM_MAX) {
+    /* Try to return exact fixnum if possible. Must check:
+       1. p is in int64 range (to avoid UB in cast)
+       2. Conversion is exact (round-trip check)
+       3. Result fits in fixnum range */
+    if (p >= (double)INT64_MIN && p < (double)INT64_MAX) {
       Fixnum i = (Fixnum) p;
-      if (p == i)
+      if ((double)i == p && int_is_fixnum (i))
         return make_fixnum (i);
     }
     return make_flonum (p);
