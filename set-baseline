@@ -1,0 +1,21 @@
+#!/bin/bash
+# Set benchmark baseline
+# Usage: ./set-baseline [commit]
+#   If no commit, uses current HEAD
+
+cd "$(dirname "$0")"
+
+if [ -n "$1" ]; then
+    COMMIT="$1"
+else
+    COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+fi
+
+if [ ! -f "bench-results/${COMMIT}.txt" ]; then
+    echo "No benchmark data for $COMMIT"
+    echo "Run: ./run-bench --save"
+    exit 1
+fi
+
+echo "$COMMIT" > bench-results/baseline
+echo "Baseline set to $COMMIT"

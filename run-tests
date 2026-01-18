@@ -1,0 +1,20 @@
+#!/bin/bash
+# Run test suite, minimal output on success
+
+set -e
+cd "$(dirname "$0")"
+export DYLD_LIBRARY_PATH=./gc/.libs
+
+result=$(./uts uts.fasl -f test.scm 2>&1)
+
+passed=$(echo "$result" | grep "^Tests passed:" | awk '{print $3}')
+failed=$(echo "$result" | grep "^Tests failed:" | awk '{print $3}')
+
+if [ "$failed" = "0" ] && [ -n "$passed" ]; then
+    echo "PASS ($passed tests)"
+    exit 0
+else
+    echo "FAIL"
+    echo "$result" | grep -E "^(FAIL:|Tests )"
+    exit 1
+fi

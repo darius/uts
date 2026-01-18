@@ -1,0 +1,95 @@
+#!/bin/bash
+# Compare benchmarks against baseline
+# Usage: ./compare-bench [baseline-commit]
+#   If no commit specified, uses bench-results/baseline
+# Exit 0 if no regression, 1 if regression detected (>10% slower)
+
+set -e
+cd "$(dirname "$0")"
+export DYLD_LIBRARY_PATH=./gc/.libs
+
+THRESHOLD=10  # percent slowdown to flag as regression
+
+# Determine baseline
+if [ -n "$1" ]; then
+    BASELINE="$1"
+elif [ -f bench-results/baseline ]; then
+    BASELINE=$(cat bench-results/baseline)
+else
+    echo "No baseline set. Run: ./run-bench --save"
+    exit 1
+fi
+
+BASELINE_FILE="bench-results/${BASELINE}.txt"
+if [ ! -f "$BASELINE_FILE" ]; then
+    echo "Baseline file not found: $BASELINE_FILE"
+    exit 1
+fi
+
+# Run current benchmarks
+CURRENT=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+
+run_one() {
+    local name="$1"
+    local expr="$2"
+
+    local tmpfile=$(mktemp)
+    local start=$(python3 -c 'import time; print(time.time())')
+    echo "$expr" | ./uts uts.fasl > "$tmpfile" 2>&1
+    local end=$(python3 -c 'import time; print(time.time())')
+    local elapsed=$(python3 -c "print(f'{$end - $start:.4f}')")
+
+    local val=$(grep -E "^-> [^ ]" "$tmpfile" | tail -1 | sed 's/^-> //')
+    rm -f "$tmpfile"
+
+    printf "%s\t%s\t%s\n" "$name" "$elapsed" "$val"
+}
+
+current_results=$(
+run_one "tak" "(define (tak x y z) (if (not (< y x)) z (tak (tak (- x 1) y z) (tak (- y 1) z x) (tak (- z 1) x y)))) (tak 24 16 8)"
+run_one "fib" "(define (fib n) (if (< n 2) n (+ (fib (- n 1)) (fib (- n 2))))) (fib 35)"
+run_one "ack" "(define (ack m n) (cond ((= m 0) (+ n 1)) ((= n 0) (ack (- m 1) 1)) (else (ack (- m 1) (ack m (- n 1)))))) (ack 3 7)"
+run_one "sum" "(define (sum-to n) (let loop ((i 0) (acc 0)) (if (> i n) acc (loop (+ i 1) (+ acc i))))) (sum-to 10000000)"
+run_one "sum-fp" "(define (sum-fp n) (let loop ((i 0) (acc 0.0)) (if (> i n) acc (loop (+ i 1) (+ acc (* i 1.0)))))) (sum-fp 10000000)"
+run_one "fac" "(define (fac n) (if (<= n 1) 1 (* n (fac (- n 1))))) (do ((i 0 (+ i 1)) (r 0)) ((>= i 10000) r) (set! r (fac 19)))"
+)
+
+# Compare
+echo "=== Benchmark comparison: $CURRENT vs $BASELINE (baseline) ==="
+printf "%-12s %10s %10s %8s  %s\n" "Name" "Current" "Baseline" "Change" ""
+
+regression=0
+echo "$current_results" | while IFS=$'\t' read -r name curr_time curr_val; do
+    base_time=$(grep "^${name}	" "$BASELINE_FILE" | cut -f2)
+    if [ -n "$base_time" ]; then
+        pct=$(python3 -c "
+curr, base = $curr_time, $base_time
+diff = ((curr - base) / base) * 100
+print(f'{diff:+.1f}%')
+")
+        # Check for regression
+        is_reg=$(python3 -c "
+curr, base = $curr_time, $base_time
+diff = ((curr - base) / base) * 100
+print('REGRESSION' if diff > $THRESHOLD else '')
+")
+        printf "%-12s %10.4f %10.4f %8s  %s\n" "$name" "$curr_time" "$base_time" "$pct" "$is_reg"
+        if [ -n "$is_reg" ]; then
+            # Signal regression (can't set variable in subshell, so we use a file)
+            touch /tmp/bench_regression_$$
+        fi
+    else
+        printf "%-12s %10.4f %10s %8s\n" "$name" "$curr_time" "N/A" ""
+    fi
+done
+
+if [ -f /tmp/bench_regression_$$ ]; then
+    rm -f /tmp/bench_regression_$$
+    echo ""
+    echo "REGRESSION DETECTED (>${THRESHOLD}% slower)"
+    exit 1
+else
+    echo ""
+    echo "OK (no regression >${THRESHOLD}%)"
+    exit 0
+fi

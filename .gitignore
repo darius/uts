@@ -10,3 +10,4 @@ gc/
 
 # macOS
 .DS_Store
+bench-results/
