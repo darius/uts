@@ -441,6 +441,9 @@ p1_listTOvector: { callout1 (list_to_vector); }
 p1_system:      { vm_check_type (is_string (x0), x0);
                   acc = make_fixnum (system (string_to_c (x0))); }
 
+p1_bitwise_not:	{ vm_check_type (is_fixnum (x0), x0);
+		  acc = make_fixnum (~fixnum_value (x0)); }
+
 
 p2_eqP:		{ acc = make_boolean (x1 == x0); }
 p2_eqvP:	{ acc = make_boolean (eqv (x1, x0)); }
@@ -624,6 +627,25 @@ p2_memv: 	{ callout2 (memv); }
 p2_append: 	{ callout2 (append); }
 p2_write: 	{ callout2 (prim_write); }
 p2_display: 	{ callout2 (prim_display); }
+
+p2_bitwise_and:	{ vm_check_type (is_fixnum (x1), x1);
+		  vm_check_type (is_fixnum (x0), x0);
+		  acc = make_fixnum (fixnum_value (x1) & fixnum_value (x0)); }
+
+p2_bitwise_ior:	{ vm_check_type (is_fixnum (x1), x1);
+		  vm_check_type (is_fixnum (x0), x0);
+		  acc = make_fixnum (fixnum_value (x1) | fixnum_value (x0)); }
+
+p2_bitwise_xor:	{ vm_check_type (is_fixnum (x1), x1);
+		  vm_check_type (is_fixnum (x0), x0);
+		  acc = make_fixnum (fixnum_value (x1) ^ fixnum_value (x0)); }
+
+p2_arithmetic_shift:
+		{ vm_check_type (is_fixnum (x1), x1);
+		  vm_check_type (is_fixnum (x0), x0);
+		  Fixnum v = fixnum_value (x1);
+		  Fixnum n = fixnum_value (x0);
+		  acc = make_fixnum (n >= 0 ? v << n : v >> -n); }
 
 p3_string_setB:	{ vm_check_type (is_string (x2), x2);
 		  vm_check_type (is_fixnum (x1), x1);

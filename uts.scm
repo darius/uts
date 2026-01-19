@@ -1558,6 +1558,7 @@
       (read-char 		52) 
       (list->vector     	53)
       (@system                  54)
+      (bitwise-not		55)
       ))
 
   (define prim-2-list
@@ -1599,6 +1600,10 @@
       (append			35)
       (write			36)
       (display			37)
+      (bitwise-and		38)
+      (bitwise-ior		39)
+      (bitwise-xor		40)
+      (arithmetic-shift		41)
       ))
 
   (define prim-3-list

@@ -174,6 +174,14 @@
   (should-be "vec.2" 'b (vector-ref '#(a b c) 1))
   (should-be "vec.3" '#(0 0 0) (make-vector 3 0))
 
+  ;; Bitwise operations
+  (should-be "bit.1" 7 (bitwise-and 15 7))
+  (should-be "bit.2" 11 (bitwise-ior 8 3))
+  (should-be "bit.3" 8 (bitwise-xor 15 7))
+  (should-be "bit.4" -1 (bitwise-not 0))
+  (should-be "bit.5" 16 (arithmetic-shift 1 4))
+  (should-be "bit.6" 4 (arithmetic-shift 16 -2))
+
   ;; Summary
   (newline)
   (newline)
