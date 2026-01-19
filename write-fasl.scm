@@ -95,3 +95,6 @@
 	    (else (@error "undumpable" obj)))))))
   (write-char #\Z port))
 
+;;; New % aliases
+(define %write-fasl-header @write-fasl-header)
+(define %write-fasl @write-fasl)

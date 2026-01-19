@@ -39,6 +39,25 @@ rm -f uts instruc-cases.c && make
 (build-system "uts.scm" "uts.fasl")
 ```
 
+## Bootstrap / Rebuilding uts.fasl
+
+The compiled `uts.fasl` is needed to compile itself - it's a bootstrap dependency. When making changes that affect both `uts.c` and `uts.scm`:
+
+1. **Simple changes**: Just rebuild fasl with `(load "write-fasl.scm") (build-system "uts.scm" "uts.fasl")`
+
+2. **Changes to primitive names or C/Scheme interface**:
+   - Keep old fasl working first (support both old and new names)
+   - Rebuild fasl while old names still work
+   - Then switch C to new names and rebuild C
+   - Rebuild fasl again with new prim-lists: load uts.scm first to get updated prim-lists, then build
+
+   ```bash
+   # With proper prim-list update:
+   ./uts uts.fasl -e '(load "write-fasl.scm") (load "uts.scm") (build-system "uts.scm" "uts.fasl")'
+   ```
+
+3. **If fasl becomes broken**: Restore from git with `git checkout HEAD -- uts.fasl`
+
 ## Architecture
 
 ### Core Components

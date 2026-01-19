@@ -2019,7 +2019,7 @@ setup (void)
   symbol_table = make_vector (101, nil);
 
   code_vector_symbol = string_to_symbol (c_string ("code-vector"));
-  error_symbol = string_to_symbol (c_string ("@error"));
+  error_symbol = string_to_symbol (c_string ("%error"));
 
   all_entered_code_vectors_symbol = 
     string_to_symbol (c_string ("@all-entered-code-vectors"));

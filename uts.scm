@@ -1551,13 +1551,18 @@
       (length			45) 
       (@skip-blanks		46)
       (@flush-input-line	47)
-      (@read-fasl-header	48) 
+      (%flush-input-line	47)
+      (@read-fasl-header	48)
+      (%read-fasl-header	48)
       (@read-fasl		49)
+      (%read-fasl		49)
       (@exit			50)
+      (%exit			50)
       (peek-char  		51)
-      (read-char 		52) 
+      (read-char 		52)
       (list->vector     	53)
       (@system                  54)
+      (%system                  54)
       (bitwise-not		55)
       ))
 
@@ -1796,7 +1801,20 @@
   (define (@proceed value)
     (if (procedure? @error-cont)
 	(@error-cont value)
-	(@error "No error to proceed from, or unproceedable"))))
+	(@error "No error to proceed from, or unproceedable")))
+
+  ;;; New % names as aliases for user-facing extensions
+  (define %command-line-args @command-line-args)
+  (define %error @error)
+  (define %error-cont @error-cont)
+  (define %proceed @proceed)
+  (define %reset @reset)
+  (define %eval @eval)
+  (define %load-fasl @load-fasl)
+  (define %runtime @runtime)
+
+  ;; SRFI-23 compatible alias
+  (define error @error))
 
 
 ;;;;
