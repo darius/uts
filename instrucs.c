@@ -36,13 +36,13 @@ global_ref:			/* d */
   {
     Object var = get_datum ();
     Object value = global_value (var);
-    if (is_unbound (value)) 
+    if (is_unbound (value))
       {
 	acc = var;
 	goto unbound_error_label;
       }
     need (1);
-    push (global_value (var));
+    push (value);
   }
 
 global_set:			/* d */
