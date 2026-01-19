@@ -7,7 +7,7 @@
 (define major-version 4)
 (define minor-version 0)
 
-(define (@write-fasl-header port)
+(define (%write-fasl-header port)
 
   (define (write-byte byte)
     (write-char (integer->char byte) port))
@@ -30,7 +30,7 @@
   (write-byte minor-version))
 
 
-(define (@write-fasl obj port)
+(define (%write-fasl obj port)
   (define (tag obj)
     (cond
       ((symbol? obj)      #\Y)
@@ -45,7 +45,7 @@
       ((boolean? obj)     #\B)
       ((string? obj)      #\S)
       ((char? obj)        #\C)
-      (else (@error "Undumpable" obj))))
+      (else (%error "Undumpable" obj))))
   (define (dump-int n)
     ;; Signed integer via zigzag + 7-bit variable-length encoding
     ;; zigzag: 0->0, -1->1, 1->2, -2->3, 2->4, ...
@@ -92,9 +92,5 @@
 	    ((#\S) (dump-string obj))
 	    ((#\C) (write-char obj port))
 	    ((#\R) (dump-string (number->string obj)))
-	    (else (@error "undumpable" obj)))))))
+	    (else (%error "undumpable" obj)))))))
   (write-char #\Z port))
-
-;;; New % aliases
-(define %write-fasl-header @write-fasl-header)
-(define %write-fasl @write-fasl)

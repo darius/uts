@@ -108,7 +108,7 @@
       (proc
        (cond ((null? opt:arg) default)
 	     ((null? (cdr opt:arg)) (car opt:arg))
-	     (else (@error "Expected 0 or 1 args to" proc opt:arg))))))
+	     (else (%error "Expected 0 or 1 args to" proc opt:arg))))))
 
   (define peek-char (@0-or-1 (lambda (x) (peek-char x)) (current-input-port)))
   (define read-char (@0-or-1 (lambda (x) (read-char x)) (current-input-port)))
@@ -121,7 +121,7 @@
        arg
        (cond ((null? opt:arg) default)
 	     ((null? (cdr opt:arg)) (car opt:arg))
-	     (else (@error "Expected 1 or 2 args to" 
+	     (else (%error "Expected 1 or 2 args to" 
 			   proc (cons arg opt:arg)))))))
 
   (define make-vector
@@ -150,7 +150,7 @@
     (cond
       ((null? rest) (atan arg1))
       ((null? (cdr rest)) (atan arg1 (car rest)))
-      (else (@error "Too many arguments -- ATAN" (cons arg1 rest)))))
+      (else (%error "Too many arguments -- ATAN" (cons arg1 rest)))))
 
   (define (append . lsts)
     (if (null? lsts)
@@ -192,7 +192,7 @@
   (define (@optional-arg arg-list default-value)
     (cond ((null? arg-list) default-value)
 	  ((null? (cdr arg-list)) (car arg-list))
-	  (else (@error "Too many arguments to procedure" arg-list))))
+	  (else (%error "Too many arguments to procedure" arg-list))))
 
 
   ; List procs
@@ -436,7 +436,7 @@
 
   (define (substring str start end)
     (if (< end start)
-	(@error "End of substring precedes start" start end)
+	(%error "End of substring precedes start" start end)
 	(let ((result (make-string (- end start) #\x)))
 	  (let loop ((i start))
 	    (if (= i end)
@@ -585,10 +585,10 @@
 	    (read-error in-port "Expected a number" n))))
 
     (define (read-error port message . irritants)
-      (set! @error-cont #f)
+      (set! %error-cont #f)
       (@complain "Read error" message irritants)
-      (@flush-input-line port)
-      (@reset '*))
+      (%flush-input-line port)
+      (%reset '*))
     
 
     ;; White space
@@ -602,7 +602,7 @@
 
     (install-read-macro #\;
       (lambda (in-port char)
-	(@flush-input-line in-port)
+	(%flush-input-line in-port)
 	(read in-port)))
 
     (install-read-macro #\( read-list)
@@ -1439,7 +1439,7 @@
       ;; Error handling
 
       (define (syntax-error message . irritants)
-	(@error "Syntax error" message irritants))
+	(%error "Syntax error" message irritants))
 
 
       ;; Body of PARSE-FORM
@@ -1499,7 +1499,7 @@
   (define prim-0-list
     '((current-input-port	 0) 
       (current-output-port 	 1)
-      (@runtime		 	 2)
+      (%runtime		 	 2)
       ))
 
   (define prim-1-list
@@ -1550,18 +1550,13 @@
       (reverse			44)
       (length			45) 
       (@skip-blanks		46)
-      (@flush-input-line	47)
       (%flush-input-line	47)
-      (@read-fasl-header	48)
       (%read-fasl-header	48)
-      (@read-fasl		49)
       (%read-fasl		49)
-      (@exit			50)
       (%exit			50)
       (peek-char  		51)
       (read-char 		52)
       (list->vector     	53)
-      (@system                  54)
       (%system                  54)
       (bitwise-not		55)
       ))
@@ -1678,7 +1673,7 @@
 
   (define write-fasl-startup-prelude
     (lambda (out-port)
-      (@write-fasl (parse-form (all-primitive-defs)) out-port)))
+      (%write-fasl (parse-form (all-primitive-defs)) out-port)))
 
   ;;;
   ;;; Compile a file
@@ -1689,14 +1684,14 @@
       (lambda (in)
 	(call-with-output-file outfile
 	  (lambda (out)
-	    (@write-fasl-header out)
+	    (%write-fasl-header out)
 	    (compile-from-port in out))))))
 
   (define (compile-from-port in out)
     (let loop ()
       (let ((o (read in)))
 	(cond ((not (eof-object? o))
-	       (@write-fasl (parse-form o) out)
+	       (%write-fasl (parse-form o) out)
 	       (loop))))))
 
 
@@ -1711,7 +1706,7 @@
     (lambda (infile fasl-name)
       (call-with-output-file fasl-name
 	(lambda (out)
-	  (@write-fasl-header out)
+	  (%write-fasl-header out)
 	  (write-fasl-startup-prelude out)
 	  (call-with-input-file infile
 	    (lambda (in)
@@ -1726,53 +1721,53 @@
 
   ; Eval and loading
 
-  (define @eval compile-and-run)
+  (define %eval compile-and-run)
 
   (define (load file)
     (call-with-input-file file
       (lambda (port)
 	(if (eqv? (peek-char port) #\#)
-	    (@load-fasl port)
+	    (%load-fasl port)
 	    (let loop ()
 	      (let ((exp (read port)))
 		(cond ((not (eof-object? exp))
-		       (@eval exp)
+		       (%eval exp)
 		       (loop)))))))))
 
-  (define (@load-fasl file-or-port)
+  (define (%load-fasl file-or-port)
     (let ((port (if (input-port? file-or-port)
 		    file-or-port
 		    (open-input-file file-or-port))))
-      (@read-fasl-header port)
+      (%read-fasl-header port)
       (let loop ()
 	(if (eof-object? (peek-char port))
 	    #t
 	    (begin
-	      ((@make-closure '#() (@read-fasl port)))
+	      ((@make-closure '#() (%read-fasl port)))
 	      (loop))))))
 
 
   ; Read-eval-print loop.
 
-  (define @reset 
+  (define %reset 
     (lambda (val)
       (display "*** ERROR DURING STARTUP." (current-output-port))
       (newline (current-output-port))
-      (@exit 1)))
+      (%exit 1)))
 
-  (define @error-cont '*)
+  (define %error-cont '*)
 
   (define (@driver-loop)                    ; the system's entry point
-    (if (and (<= 3 (length @command-line-args))
-	     (string=? (cadr @command-line-args) "-f"))
-	(load (caddr @command-line-args))
+    (if (and (<= 3 (length %command-line-args))
+	     (string=? (cadr %command-line-args) "-f"))
+	(load (caddr %command-line-args))
 	(begin
-	  (call-with-current-continuation (lambda (k) (set! @reset k)))
+	  (call-with-current-continuation (lambda (k) (set! %reset k)))
 	  (let loop ()
 	    (display "-> ")
 	    (let ((exp (read)))
 	      (cond ((not (eof-object? exp))
-		     (repl-print (@eval exp))
+		     (repl-print (%eval exp))
 		     (loop))))))))
 
   (define repl-print
@@ -1791,30 +1786,20 @@
 	      irritants)
     (newline))
 
-  (define (@error message . irritants)
+  (define (%error message . irritants)
     (call-with-current-continuation 
       (lambda (cont)
-	(set! @error-cont cont)
+	(set! %error-cont cont)
 	(@complain "Error" message irritants)
-	(@reset '*))))
+	(%reset '*))))
 
-  (define (@proceed value)
-    (if (procedure? @error-cont)
-	(@error-cont value)
-	(@error "No error to proceed from, or unproceedable")))
-
-  ;;; New % names as aliases for user-facing extensions
-  (define %command-line-args @command-line-args)
-  (define %error @error)
-  (define %error-cont @error-cont)
-  (define %proceed @proceed)
-  (define %reset @reset)
-  (define %eval @eval)
-  (define %load-fasl @load-fasl)
-  (define %runtime @runtime)
+  (define (%proceed value)
+    (if (procedure? %error-cont)
+	(%error-cont value)
+	(%error "No error to proceed from, or unproceedable")))
 
   ;; SRFI-23 compatible alias
-  (define error @error))
+  (define error %error))
 
 
 ;;;;
@@ -1915,7 +1900,7 @@
 		  ((w) (take 2 (+ (+ pc 3)
 				  (+ (* 256 (byte-ref i)) (byte-ref (+ i 1))))))
 		  ((b) (take 1 (byte-ref i)))
-		  (else (@error "BUG: bad instruc arg" arg))))))
+		  (else (%error "BUG: bad instruc arg" arg))))))
 
       (loop 1 (vector-ref @instruc-args instruc) '()
 	    (lambda (width args)
@@ -2123,7 +2108,7 @@
 	(if (ok? x)
 	    x
 	    ;; Keep this debug-the-debugger stuff in for a bit...
-	    (@error "Bad ref to" tag x)))))
+	    (%error "Bad ref to" tag x)))))
 
   (define frame/base     (frame/ref 1 'base integer?))
 
@@ -2161,9 +2146,9 @@
   ;;;
 
   (define (debug)
-    (if (continuation? @error-cont)
-	(inspect-cont @error-cont)
-	(@error "No context to debug")))
+    (if (continuation? %error-cont)
+	(inspect-cont %error-cont)
+	(%error "No context to debug")))
 
   (define (inspect-cont cont)
     (let ((outer-frame 

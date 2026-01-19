@@ -2373,7 +2373,7 @@ main (int argc, char **argv)
   setup ();
 
   /* but this keeps us from running multiple Interpreters... fix */
-  set_global_value (string_to_symbol (c_string ("@command-line-args")),
+  set_global_value (string_to_symbol (c_string ("%command-line-args")),
 		    command_line_arglist (argc, argv));
  
   run_fasl (argv [1]);
