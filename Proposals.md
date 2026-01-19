@@ -36,6 +36,20 @@ Several limits are hardcoded without clear overflow handling:
 
 Symbol interning uses a 101-bucket hash table. For very large programs with thousands of symbols, increasing the bucket count might help, but this is unlikely to be a bottleneck in practice.
 
+### Compiler Warnings (Clang)
+
+Building with clang and `-Wall` produces several warnings:
+
+1. **Dangling else** (`-Wdangling-else`): In `read_token()` around lines 742/753. Adding explicit braces would silence these.
+
+2. **Logical operator precedence** (`-Wlogical-op-parentheses`): Line 1177 has `a && b || c` without parentheses. Currently correct but fragile.
+
+3. **Uninitialized variable** (`-Wsometimes-uninitialized`): Variable `b` in boolean literal parsing (line 1815) is uninitialized if neither `#t` nor `#f` is matched. The else branch calls `vm_error()` which doesn't return, but clang can't prove this.
+
+4. **Volatile qualifier discarded** (`-Wincompatible-pointer-types-discards-qualifiers`): The `Interpreter i` is declared volatile for `setjmp` safety, but passed to functions expecting non-volatile pointers.
+
+**Recommendation**: These are low priority - the code works correctly. Could silence with targeted fixes or `-Wno-*` flags if warnings become noisy.
+
 ## Efficiency
 
 ### String Operations

@@ -305,6 +305,12 @@ string_ptr (Object obj)
   return data_ptr (obj);
 }
 
+fast const char *
+string_cstr (Object obj)
+{
+  return (const char *)string_ptr (obj);
+}
+
 static Flag 
 string_equal (Object str1, Object str2)
 {
@@ -395,7 +401,7 @@ object_to_c_string (char *buffer, size_t size, Object str)
     vm_error ("Buffer overflow while converting to C string", str);
   else 
     {
-      const char *s = string_ptr (str);  /*** does char vs. uchar matter? */
+      const char *s = string_cstr (str);
       char *d = buffer;
       for (; L != 0; ++s, ++d, --L)
 	*d = *s;
@@ -808,7 +814,7 @@ string_hash (Object str)
   assert (is_string (str));
   {
     int l = string_length (str);
-    const char *s = string_ptr (str);
+    const char *s = string_cstr (str);
     unsigned c = 0;
     for (; l != 0; ++s, --l)
       c = c * 2 + *s;
@@ -951,7 +957,7 @@ string_to_number (Object str, unsigned radix)
      d[R]:		<digit of radix R>
    */
 
-  const char *s = string_ptr (str);
+  const char *s = string_cstr (str);
   int n = string_length (str);
   char buffer[UNPARSED_FLONUM_SIZE + 1], *buf = buffer;
   int i = 0;			/* index of next char in str */
@@ -1253,8 +1259,8 @@ number_to_string (Object num, unsigned radix)
 static Object
 read_atom (FILE *in, int c)
 {
-  unsigned char buf [1024];
-  unsigned char *b = buf;
+  char buf [1024];
+  char *b = buf;
   *b++ = tolower (c);
 
   for (;;) 
@@ -1473,7 +1479,7 @@ divide (Object n1, Object n2)
 static void 
 write_string (FILE *file, Object str)
 {
-  const char *s = string_ptr (str);
+  const char *s = string_cstr (str);
   int i, l = string_length (str);
   
   put_char ('"', file);
