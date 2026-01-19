@@ -104,14 +104,15 @@ Debugger commands: `?` help, `u` up, `d` down, `e` env, `n` next frame, `a` asse
 - Redefining standard procedures like `map` can break the compiler
 - Numeric tower: fixnums (62-bit) and IEEE doubles only
 - Macros (R4RS macro appendix) are not implemented
+- Bitwise primitives: `bitwise-and`, `bitwise-ior`, `bitwise-xor`, `bitwise-not`, `arithmetic-shift`
 
 ## Testing and Benchmarking
 
 ```bash
-# Run test suite (41 tests, adapted from SISC r5rs_pitfall)
+# Run test suite (47 tests)
 ./run-tests
 
-# Run benchmarks
+# Run benchmarks (tak, fib, ack, sum, sum-fp, fac, superopt, um)
 ./run-bench
 
 # Save benchmark results for current commit

@@ -32,11 +32,9 @@ Several limits are hardcoded without clear overflow handling:
 - Make limits configurable via config.h
 - Add dynamic resizing where feasible
 
-### Linear Symbol Interning
+### Symbol Table Size
 
-Symbol lookup is O(n) in number of interned symbols. For large programs this becomes noticeable.
-
-**Possible fix**: Hash table for symbol interning. Modest code increase but significant speedup for symbol-heavy workloads.
+Symbol interning uses a 101-bucket hash table. For very large programs with thousands of symbols, increasing the bucket count might help, but this is unlikely to be a bottleneck in practice.
 
 ## Efficiency
 
