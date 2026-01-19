@@ -52,10 +52,10 @@ rm -f uts instruc-cases.c && make
 
 Tagged pointers with low 2 bits encoding type:
 - `00`: Boxed object pointer (flonum, port, string, pair, closure, symbol, vector)
-- `01`: Fixnum (30-bit signed integer)
+- `01`: Fixnum (62-bit signed integer)
 - `11`: Special values (chars, booleans, eof, nil, unbound)
 
-Boxed objects have a 32-bit header with 29-bit size and 3-bit tag.
+Boxed objects have a header with size and 3-bit tag.
 
 ### Bytecode VM
 
@@ -78,7 +78,7 @@ The `parse-form` function compiles Scheme to bytecode. Key sections:
 
 ### FASL Format
 
-Binary format for compiled code with magic number `0xFADDF00D`. Version 4.0. Supports: symbols, pairs, integers, floats, booleans, strings, chars, vectors, code objects, closures.
+Binary format for compiled code with magic number `0xFADDF00D`. Version 4.0. Integers use 7-bit varint encoding with zigzag for signed values. Supports: symbols, pairs, integers, floats, booleans, strings, chars, vectors, code objects, closures.
 
 ## Key Global Variables (Scheme)
 
@@ -102,14 +102,36 @@ Debugger commands: `?` help, `u` up, `d` down, `e` env, `n` next frame, `a` asse
 
 - Global definitions starting with `@` are internal (e.g., `@EVAL`, `@error`)
 - Redefining standard procedures like `map` can break the compiler
-- Numeric tower: fixnums (30-bit) and IEEE doubles only
+- Numeric tower: fixnums (62-bit) and IEEE doubles only
 - Macros (R4RS macro appendix) are not implemented
 
-## 64-bit Compatibility
+## Testing and Benchmarking
 
-The original code was written for 32-bit systems. Key fixes for 64-bit:
+```bash
+# Run test suite (41 tests, adapted from SISC r5rs_pitfall)
+./run-tests
 
-- **Object_header alignment**: Added padding to ensure 8-byte alignment of Object pointers stored after headers (uts.c)
-- **Pointer-sized arithmetic**: Changed `object_bits()` to return `uintptr_t` and use `intptr_t` for pointer arithmetic in tag operations (uts.c, instrucs.c, config.h)
-- **highbit constant**: Changed from `(1 << 31)` to `(1UL << (WORD_BITS - 1))` for 64-bit (config.h)
-- **round() conflict**: Renamed local `round()` to `my_round()` to avoid conflict with system library (uts.c, instrucs.c)
+# Run benchmarks
+./run-bench
+
+# Save benchmark results for current commit
+./run-bench --save
+
+# Compare current benchmarks against baseline (flags >10% regression)
+./compare-bench
+
+# Set a commit as the benchmark baseline
+./set-baseline [commit]
+```
+
+Benchmark results are stored in `bench-results/` with commit-stamped filenames. The baseline commit is tracked in `bench-results/baseline`.
+
+## 64-bit Port
+
+The original code was written for 32-bit systems. Key changes for 64-bit:
+
+- **62-bit fixnums**: Upgraded from 30-bit to use nearly all available bits
+- **Object_header alignment**: Added padding to ensure 8-byte alignment of Object pointers stored after headers
+- **Pointer-sized arithmetic**: Changed `object_bits()` to return `uintptr_t` and use `intptr_t` for pointer arithmetic in tag operations
+- **Overflow detection**: Rewrote ADD/SUB to avoid signed overflow undefined behavior
+- **round() conflict**: Renamed local `round()` to `my_round()` to avoid conflict with system library
