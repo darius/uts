@@ -1,0 +1,114 @@
+#!/bin/bash
+# Generate C code coverage reports for tests and/or benchmarks
+# Usage: ./run-coverage [test|bench|all]
+#   test:  coverage for test suite only
+#   bench: coverage for benchmarks only
+#   all:   both (default)
+#
+# Results go to coverage-results/{test,bench}/
+
+set -e
+cd "$(dirname "$0")"
+
+MODE="${1:-all}"
+COVDIR="coverage-results"
+SDK=$(xcrun --show-sdk-path)
+COVFLAGS="-fprofile-instr-generate -fcoverage-mapping -isysroot $SDK"
+
+build_cov() {
+    echo "Building with coverage instrumentation..."
+    rm -f uts
+    clang -O1 -DNDEBUG -Wall $COVFLAGS uts.c gc/gc.a -o uts -lm
+}
+
+run_tests_cov() {
+    echo "Running tests..."
+    rm -f default.profraw
+    LLVM_PROFILE_FILE="test.profraw" ./uts uts.fasl -f test.scm > /dev/null 2>&1 || true
+}
+
+run_bench_cov() {
+    echo "Running benchmarks (subset for coverage)..."
+    rm -f bench.profraw
+    # Run a subset - full benchmarks take too long
+    LLVM_PROFILE_FILE="bench.profraw" ./uts uts.fasl <<'EOF' >/dev/null 2>&1
+(define (tak x y z) (if (not (< y x)) z (tak (tak (- x 1) y z) (tak (- y 1) z x) (tak (- z 1) x y))))
+(tak 18 12 6)
+(define (fib n) (if (< n 2) n (+ (fib (- n 1)) (fib (- n 2)))))
+(fib 25)
+(define (ack m n) (cond ((= m 0) (+ n 1)) ((= n 0) (ack (- m 1) 1)) (else (ack (- m 1) (ack m (- n 1))))))
+(ack 3 6)
+(define (sum-to n) (let loop ((i 0) (acc 0)) (if (> i n) acc (loop (+ i 1) (+ acc i)))))
+(sum-to 100000)
+EOF
+}
+
+generate_report() {
+    local name="$1"
+    local profraw="$2"
+    local outdir="$COVDIR/$name"
+
+    if [ ! -f "$profraw" ]; then
+        echo "No profile data for $name"
+        return
+    fi
+
+    echo "Generating $name coverage report..."
+    mkdir -p "$outdir"
+
+    # Merge raw profile data
+    xcrun llvm-profdata merge -sparse "$profraw" -o "$outdir/coverage.profdata"
+
+    # Generate text summary
+    xcrun llvm-cov report ./uts -instr-profile="$outdir/coverage.profdata" \
+        > "$outdir/summary.txt"
+
+    # Generate detailed line-by-line report
+    xcrun llvm-cov show ./uts -instr-profile="$outdir/coverage.profdata" \
+        -format=text > "$outdir/detailed.txt"
+
+    # Generate HTML report
+    xcrun llvm-cov show ./uts -instr-profile="$outdir/coverage.profdata" \
+        -format=html -output-dir="$outdir/html"
+
+    # Show summary
+    echo "=== $name Coverage Summary ==="
+    cat "$outdir/summary.txt"
+    echo ""
+    echo "Reports in $outdir/"
+    echo "  summary.txt  - function/file summary"
+    echo "  detailed.txt - line-by-line annotated source"
+    echo "  html/        - HTML report (open html/index.html)"
+    echo ""
+}
+
+cleanup() {
+    rm -f test.profraw bench.profraw
+}
+
+# Main
+build_cov
+
+case "$MODE" in
+    test)
+        run_tests_cov
+        generate_report "test" "test.profraw"
+        ;;
+    bench)
+        run_bench_cov
+        generate_report "bench" "bench.profraw"
+        ;;
+    all)
+        run_tests_cov
+        generate_report "test" "test.profraw"
+        run_bench_cov
+        generate_report "bench" "bench.profraw"
+        ;;
+    *)
+        echo "Usage: $0 [test|bench|all]"
+        exit 1
+        ;;
+esac
+
+cleanup
+echo "Done. Rebuild without coverage: ./makefast"

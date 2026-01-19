@@ -11,3 +11,6 @@ gc/
 # macOS
 .DS_Store
 bench-results/
+coverage-results/
+*.profraw
+*.profdata
