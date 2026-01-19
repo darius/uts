@@ -514,24 +514,18 @@ p2_write_char:  { vm_check_type (is_char (x1), x1);
       }						\
     } while (0)
 
-p2_ADD:		
-/* FIXME: what about overflow, etc., in the flonum operations? */
-/* FIXME: move the dependence on fixnum rep elsewhere... */
-/* also this doesn't look any faster than the obvious code.  bleah. 
-   maybe we can combine the overflow check with the tag check. */
-    { 
-      if (is_fixnum (x1) && is_fixnum (x0)) 
+p2_ADD:
+    {
+      if (is_fixnum (x1) && is_fixnum (x0))
 	{
-				/* tag trickery */
-	  Word b1 = (Word) object_bits (x1), b0 = (Word) object_bits (x0);
-	  Word sum = b1 + b0 - 0x01;
-	  Word bitdiff = b1 ^ b0;
-	  if (((bitdiff | ~(bitdiff | (sum ^ b0))) & WORD_HIGHBIT) != 0)
-	    acc = (Object) sum;
+	  Fixnum v1 = fixnum_value (x1), v0 = fixnum_value (x0);
+	  Fixnum sum = v1 + v0;  /* can't overflow int64: two 62-bit values */
+	  if (int_is_fixnum (sum))
+	    acc = make_fixnum (sum);
 	  else
-	    acc = make_flonum (ashr2 (b1) + ashr2 (b0));
-	} 
-      else 
+	    acc = make_flonum ((double) v1 + (double) v0);
+	}
+      else
 	{
 	  double d1, d0;
 	  COERCE_DOUBLE (d1, x1);
@@ -542,21 +536,21 @@ p2_ADD:
 
 p2_SUB:
     {
-      if (is_fixnum (x1) && is_fixnum (x0)) 
-	{                        /* tag trickery */
-	  Word b1 = (Word) object_bits (x1), b0 = (Word) object_bits (x0);
-	  Word d = b1 - b0 + 0x01;
-	  if (((b1 ^ b0) & (b1 ^ d) & WORD_HIGHBIT) == 0)
-	    acc = (Object) d;
+      if (is_fixnum (x1) && is_fixnum (x0))
+	{
+	  Fixnum v1 = fixnum_value (x1), v0 = fixnum_value (x0);
+	  Fixnum diff = v1 - v0;  /* can't overflow int64: two 62-bit values */
+	  if (int_is_fixnum (diff))
+	    acc = make_fixnum (diff);
 	  else
-	    acc = make_flonum (ashr2 (b1) - ashr2 (b0));
-	} 
-      else 
+	    acc = make_flonum ((double) v1 - (double) v0);
+	}
+      else
 	{
 	  double d1, d0;
 	  COERCE_DOUBLE (d1, x1);
 	  COERCE_DOUBLE (d0, x0);
-	  acc = make_flonum (as_double (x1) - as_double (x0));
+	  acc = make_flonum (d1 - d0);
 	}
     }
 
