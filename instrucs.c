@@ -645,7 +645,13 @@ p2_arithmetic_shift:
 		  vm_check_type (is_fixnum (x0), x0);
 		  Fixnum v = fixnum_value (x1);
 		  Fixnum n = fixnum_value (x0);
-		  acc = make_fixnum (n >= 0 ? v << n : v >> -n); }
+		  if (n >= 0)
+		    acc = make_fixnum (v << n);
+		  else {
+		    /* portable arithmetic right shift */
+		    int s = -n;
+		    acc = make_fixnum (v >= 0 ? v >> s : ~(~v >> s));
+		  } }
 
 p3_string_setB:	{ vm_check_type (is_string (x2), x2);
 		  vm_check_type (is_fixnum (x1), x1);
