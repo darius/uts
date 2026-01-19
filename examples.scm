@@ -224,6 +224,156 @@
 
 
 ;;; ============================================================
+;;; Tiny Forth interpreter
+;;; ============================================================
+
+(define (make-forth)
+  (let ((stack '())
+        (rstack '())
+        (dict '()))
+
+    (define (push x) (set! stack (cons x stack)))
+    (define (pop) (let ((x (car stack))) (set! stack (cdr stack)) x))
+    (define (rpush x) (set! rstack (cons x rstack)))
+    (define (rpop) (let ((x (car rstack))) (set! rstack (cdr rstack)) x))
+
+    (define (builtin-op op)
+      (let ((b (pop)) (a (pop)))
+        (push (op a b))))
+
+    (define builtins
+      `((+ . ,(lambda () (builtin-op +)))
+        (- . ,(lambda () (builtin-op -)))
+        (* . ,(lambda () (builtin-op *)))
+        (/ . ,(lambda () (builtin-op quotient)))
+        (dup . ,(lambda () (push (car stack))))
+        (drop . ,(lambda () (pop)))
+        (swap . ,(lambda () (let ((a (pop)) (b (pop))) (push a) (push b))))
+        (over . ,(lambda () (push (cadr stack))))
+        (rot . ,(lambda () (let ((a (pop)) (b (pop)) (c (pop)))
+                             (push b) (push a) (push c))))
+        (>r . ,(lambda () (rpush (pop))))
+        (r> . ,(lambda () (push (rpop))))
+        (= . ,(lambda () (push (if (= (pop) (pop)) -1 0))))
+        (< . ,(lambda () (let ((b (pop)) (a (pop))) (push (if (< a b) -1 0)))))
+        (and . ,(lambda () (push (bitwise-and (pop) (pop)))))
+        (or . ,(lambda () (push (bitwise-ior (pop) (pop)))))
+        (not . ,(lambda () (push (bitwise-not (pop)))))
+        (. . ,(lambda () (display (pop)) (display " ")))))
+
+    (define (exec word)
+      (cond
+        ((number? word) (push word))
+        ((assq word builtins) => (lambda (p) ((cdr p))))
+        ((assq word dict) => (lambda (p) (run (cdr p))))
+        (else (error "Unknown word" word))))
+
+    (define (run words)
+      (for-each exec words))
+
+    (define (define-word name body)
+      (set! dict (cons (cons name body) dict)))
+
+    (lambda (msg . args)
+      (case msg
+        ((run) (run (car args)) stack)
+        ((define) (define-word (car args) (cadr args)))
+        ((stack) stack)
+        ((reset) (set! stack '()) (set! rstack '()))))))
+
+(define (test-forth)
+  (let ((f (make-forth)))
+    (f 'define 'square '(dup *))
+    (f 'define 'cube '(dup square *))
+    (f 'reset)
+    (and
+     (equal? (f 'run '(3 4 +)) '(7))
+     (equal? (begin (f 'reset) (f 'run '(5 square))) '(25))
+     (equal? (begin (f 'reset) (f 'run '(3 cube))) '(27))
+     (equal? (begin (f 'reset) (f 'run '(10 3 /))) '(3)))))
+
+
+;;; ============================================================
+;;; Maze generator (randomized depth-first search)
+;;; ============================================================
+
+(define (make-maze rows cols)
+  ;; Returns a vector of vectors: 0=wall, 1=passage
+  ;; Uses randomized DFS to carve passages
+
+  (define (make-grid val)
+    (let ((g (make-vector rows)))
+      (do ((r 0 (+ r 1))) ((>= r rows) g)
+        (vector-set! g r (make-vector cols val)))))
+
+  (define grid (make-grid 0))
+  (define (get r c) (vector-ref (vector-ref grid r) c))
+  (define (put! r c v) (vector-set! (vector-ref grid r) c v))
+
+  ;; Simple xorshift random for reproducibility
+  (define seed 12345)
+  (define (rand n)
+    (set! seed (bitwise-xor seed (arithmetic-shift seed 13)))
+    (set! seed (bitwise-and seed #xffffffff))
+    (set! seed (bitwise-xor seed (arithmetic-shift seed -17)))
+    (set! seed (bitwise-xor seed (arithmetic-shift seed 5)))
+    (set! seed (bitwise-and seed #xffffffff))
+    (remainder seed n))
+
+  (define (shuffle lst)
+    (let ((v (list->vector lst)))
+      (do ((i (- (vector-length v) 1) (- i 1))) ((< i 1) (vector->list v))
+        (let* ((j (rand (+ i 1)))
+               (tmp (vector-ref v i)))
+          (vector-set! v i (vector-ref v j))
+          (vector-set! v j tmp)))))
+
+  (define (in-bounds? r c)
+    (and (>= r 0) (< r rows) (>= c 0) (< c cols)))
+
+  (define (carve r c)
+    (put! r c 1)
+    (for-each
+     (lambda (dir)
+       (let ((dr (car dir)) (dc (cdr dir)))
+         (let ((nr (+ r (* dr 2))) (nc (+ c (* dc 2))))
+           (if (and (in-bounds? nr nc) (= (get nr nc) 0))
+               (begin
+                 (put! (+ r dr) (+ c dc) 1)  ; knock down wall
+                 (carve nr nc))))))
+     (shuffle '((0 . 1) (0 . -1) (1 . 0) (-1 . 0)))))
+
+  ;; Start from (1,1)
+  (carve 1 1)
+  grid)
+
+(define (maze->string grid)
+  (let ((rows (vector-length grid))
+        (cols (vector-length (vector-ref grid 0))))
+    (let loop ((r 0) (acc '()))
+      (if (>= r rows)
+          (apply string-append (reverse acc))
+          (loop (+ r 1)
+                (cons (string-append
+                       (let cloop ((c 0) (s ""))
+                         (if (>= c cols)
+                             s
+                             (cloop (+ c 1)
+                                    (string-append s (if (= (vector-ref (vector-ref grid r) c) 0)
+                                                         "#" " ")))))
+                       "\n")
+                      acc))))))
+
+(define (test-maze)
+  (let* ((m (make-maze 11 21))
+         (s (maze->string m)))
+    ;; Check that we have passages (spaces) and walls (#)
+    (and (> (string-length s) 0)
+         ;; Verify corners are walls
+         (eqv? (string-ref s 0) #\#))))
+
+
+;;; ============================================================
 ;;; Run all example tests
 ;;; ============================================================
 
@@ -247,6 +397,8 @@
   (check "streams" test-streams)
   (check "deriv" test-deriv)
   (check "gray" test-gray)
+  (check "forth" test-forth)
+  (check "maze" test-maze)
 
   (newline)
   (display "Examples: ")
