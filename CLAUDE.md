@@ -146,6 +146,8 @@ Debugger commands: `?` help, `u` up, `d` down, `e` env, `n` next frame, `a` asse
 
 Benchmark results are stored in `bench-results/` with commit-stamped filenames. The baseline commit is tracked in `bench-results/baseline`.
 
+**Benchmarking methodology:** Always rebuild with `./makefast` before benchmarking. Run multiple iterations and discard the first (cold cache). Be skeptical of large speedups from small changes - verify by A/B testing both versions in the same session. System load, thermal throttling, and background processes can easily cause 20%+ variance.
+
 ## 64-bit Port
 
 The original code was written for 32-bit systems. Key changes for 64-bit:
