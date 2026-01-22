@@ -53,10 +53,36 @@
 (test-error "(car \"string\")" (lambda () (car "string")))
 (test-error "(car #\\a)" (lambda () (car #\a)))
 
-;; Calling a non-procedure
-(test-error "(5 1 2)" (lambda () (5 1 2)))
-(test-error "('foo)" (lambda () ('foo)))
-(test-error "(#t 1)" (lambda () (#t 1)))
+;; Calling a non-procedure - call position
+(test-error "call non-closure: number" (lambda () (5 1 2)))
+(test-error "call non-closure: symbol" (lambda () ('foo)))
+(test-error "call non-closure: boolean" (lambda () (#t 1)))
+(test-error "call non-closure: string" (lambda () ("hello" 1)))
+(test-error "call non-closure: pair" (lambda () ('(a . b) 1)))
+(test-error "call non-closure: vector" (lambda () ('#(a b) 1)))
+
+;; Calling a non-procedure - tail-call position
+(define (tailcall-number) (5 1 2))
+(define (tailcall-symbol) ('foo))
+(define (tailcall-boolean) (#t 1))
+(define (tailcall-string) ("hello" 1))
+(define (tailcall-pair) ('(a . b) 1))
+(define (tailcall-vector) ('#(a b) 1))
+
+(test-error "tailcall non-closure: number" (lambda () (tailcall-number)))
+(test-error "tailcall non-closure: symbol" (lambda () (tailcall-symbol)))
+(test-error "tailcall non-closure: boolean" (lambda () (tailcall-boolean)))
+(test-error "tailcall non-closure: string" (lambda () (tailcall-string)))
+(test-error "tailcall non-closure: pair" (lambda () (tailcall-pair)))
+(test-error "tailcall non-closure: vector" (lambda () (tailcall-vector)))
+
+;; Apply with non-procedure
+(test-error "apply non-closure: number" (lambda () (apply 5 '(1 2))))
+(test-error "apply non-closure: symbol" (lambda () (apply 'foo '())))
+(test-error "apply non-closure: boolean" (lambda () (apply #t '(1))))
+(test-error "apply non-closure: string" (lambda () (apply "hello" '(1))))
+(test-error "apply non-closure: pair" (lambda () (apply '(a . b) '(1))))
+(test-error "apply non-closure: vector" (lambda () (apply '#(a b) '(1))))
 
 ;; Arithmetic type errors
 (test-error "(+ 1 'a)" (lambda () (+ 1 'a)))
@@ -145,9 +171,38 @@
 ;; Too few arguments (if detectable at runtime)
 ;; Note: Some of these may be caught at compile time instead
 
-;; Too many arguments to fixed-arity procedures
+;; Too many arguments to fixed-arity procedures (primitives)
 (test-error "(car 1 2)" (lambda () (car 1 2)))
 (test-error "(cons 1 2 3)" (lambda () (cons 1 2 3)))
+
+;; User-defined procedure with wrong arg count - call position
+(define (one-arg x) x)
+(define (two-args x y) (cons x y))
+(define (three-args x y z) (list x y z))
+
+(test-error "call: too few args (0 for 1)" (lambda () (one-arg)))
+(test-error "call: too many args (2 for 1)" (lambda () (one-arg 1 2)))
+(test-error "call: too few args (1 for 2)" (lambda () (two-args 1)))
+(test-error "call: too many args (3 for 2)" (lambda () (two-args 1 2 3)))
+(test-error "call: too few args (0 for 3)" (lambda () (three-args)))
+(test-error "call: too many args (4 for 3)" (lambda () (three-args 1 2 3 4)))
+
+;; User-defined procedure with wrong arg count - tail-call position
+(define (tail-call-one-arg-0) (one-arg))
+(define (tail-call-one-arg-2) (one-arg 1 2))
+(define (tail-call-two-args-1) (two-args 1))
+(define (tail-call-two-args-3) (two-args 1 2 3))
+
+(test-error "tailcall: too few args (0 for 1)" (lambda () (tail-call-one-arg-0)))
+(test-error "tailcall: too many args (2 for 1)" (lambda () (tail-call-one-arg-2)))
+(test-error "tailcall: too few args (1 for 2)" (lambda () (tail-call-two-args-1)))
+(test-error "tailcall: too many args (3 for 2)" (lambda () (tail-call-two-args-3)))
+
+;; apply with wrong number of args
+(test-error "apply: too few args (0 for 1)" (lambda () (apply one-arg '())))
+(test-error "apply: too many args (2 for 1)" (lambda () (apply one-arg '(1 2))))
+(test-error "apply: too few args (1 for 2)" (lambda () (apply two-args '(1))))
+(test-error "apply: too many args (3 for 2)" (lambda () (apply two-args '(1 2 3))))
 
 ;; apply with non-list as final argument
 (test-error "(apply + 1)" (lambda () (apply + 1)))
