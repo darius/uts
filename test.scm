@@ -272,6 +272,53 @@
   (should-be "numstr.9" 42 (string->number "52" 8))
   (should-be "numstr.10" 42 (string->number "2a" 16))
 
+  ;; === Flonum arithmetic ===
+  (should-be "flo.1" 3.5 (+ 1.0 2.5))
+  (should-be "flo.2" 1.5 (- 3.0 1.5))
+  (should-be "flo.3" 6.0 (* 2.0 3.0))
+  (should-be "flo.4" 2.5 (/ 5.0 2.0))
+  (should-be "flo.5" #t (< 1.0 2.0))
+  (should-be "flo.6" #f (< 2.0 1.0))
+  (should-be "flo.7" #t (<= 1.0 1.0))
+  (should-be "flo.8" #t (= 2.5 2.5))
+  (should-be "flo.9" #f (= 2.5 2.6))
+  ;; Mixed fixnum/flonum
+  (should-be "flo.10" 3.5 (+ 1 2.5))
+  (should-be "flo.11" 3.5 (+ 1.5 2))
+  (should-be "flo.12" #t (< 1 2.5))
+  (should-be "flo.13" #t (= 2.0 2))
+
+  ;; === Runtime ===
+  (should-be "runtime.1" #t (number? (%runtime)))
+  (should-be "runtime.2" #t (>= (%runtime) 0))
+
+  ;; === Write (to file, then read back) ===
+  ;; write produces readable output that read can parse back
+  (should-be "write.1" "hello"
+    (let ((p (open-output-file "/tmp/uts-write-test.txt")))
+      (write "hello" p)
+      (close-output-port p)
+      (let ((p2 (open-input-file "/tmp/uts-write-test.txt")))
+        (let ((result (read p2)))
+          (close-input-port p2)
+          result))))
+  (should-be "write.2" '(1 2 3)
+    (let ((p (open-output-file "/tmp/uts-write-test.txt")))
+      (write '(1 2 3) p)
+      (close-output-port p)
+      (let ((p2 (open-input-file "/tmp/uts-write-test.txt")))
+        (let ((result (read p2)))
+          (close-input-port p2)
+          result))))
+  (should-be "write.3" '#(a b c)
+    (let ((p (open-output-file "/tmp/uts-write-test.txt")))
+      (write '#(a b c) p)
+      (close-output-port p)
+      (let ((p2 (open-input-file "/tmp/uts-write-test.txt")))
+        (let ((result (read p2)))
+          (close-input-port p2)
+          result))))
+
   ;; === File port operations ===
   ;; Test open-output-file and close-output-port
   (should-be "port.1" #t
