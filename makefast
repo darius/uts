@@ -1,3 +1,0 @@
-#!/bin/sh
-rm -f uts
-make CFLAGS="-O2 -DNDEBUG -lm"

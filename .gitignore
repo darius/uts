@@ -2,6 +2,7 @@
 uts
 uts_opt
 instruc-cases.c
+config.mk
 *.o
 *.dSYM/
 

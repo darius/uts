@@ -4,7 +4,7 @@
  */
 
 
-#include "gc/gc.h"
+#include <gc.h>
 #include "config.h"
 
 /* #include <assert.h> */
