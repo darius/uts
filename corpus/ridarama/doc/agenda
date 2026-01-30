@@ -1,0 +1,17 @@
+- ability to search backwards from desired arrival time
+
+- general schedules, not just weekdays
+
+- compute cost of a path
+
+- other metrics besides shortest time (like cost, number of transfers,
+  avoidance of bikes-prohibited trains, ...)
+
+- more routes besides bart & caltrain
+  (this would be the easiest for others to help with)
+
+- some first hack at a web interface around it
+
+- the whole GIS thingy (geographical information systems) -- this code
+  doesn't know where anything is on the Earth yet.  There's code for
+  computing distances as the crow flies, but that's it.

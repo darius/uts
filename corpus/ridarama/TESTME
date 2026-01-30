@@ -1,0 +1,20 @@
+Sample session:
+
+$ uts
+-> (load "loadme.scm")
+"helpers.scm"
+"macro.scm"
+"record-macros.scm"
+"record.scm"
+"queue.scm"
+"trie.scm"
+"search.scm"
+"time.scm"
+"geography.scm"
+"geocode.scm"
+"read.scm"
+"bart.scm"
+-> (do-tests)
+initialized
+(#(path #(event ucity 82800 #f) #f 0 536870912))
+...

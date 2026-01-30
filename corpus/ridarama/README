@@ -1,0 +1,62 @@
+    ridarama -- the beginning of a free web-rides system
+    Copyright (C) 2001 Darius Bacon
+
+    This library is free software; you can redistribute it and/or
+    modify it under the terms of the GNU Library General Public
+    License as published by the Free Software Foundation; either
+    version 2 of the License, or (at your option) any later version.
+
+    This library is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Library General Public License for more details.
+
+    You should have received a copy of the GNU Library General Public
+    License along with this library; if not, write to the Free
+    Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+
+
+In spring of 2000 I was commuting every weekday, three or four hours
+each way by public transit -- nevermind how I got in such a silly
+situation. One especially crowded morning I started wondering how the
+net could help out.
+
+Most obviously we could have a ride-matchmaker website -- you enter
+where you are and where you're going and when, and whether you have a
+car, and optionally other info like how many passengers you can take,
+how flexible you are about timing, smoking, etc... There can be
+reputation tracking like ebay has, to ward off knife-wielding maniacs
+-- plus big disclaimers to ward off writ-wielding lawyers. This could
+end up a lot more flexible than traditional ridesharing, not limited
+to regular commutes -- especially after mobile net access becomes
+common. And unlike most apps it would even get people meeting each
+other away from their computers.
+
+A service like this needs critical mass to take off: no posts without
+searchers, no searchers without posts. We could grow to critical mass
+by providing some useful related service -- my idea was unified trip
+planning over the different public transit methods in the Bay
+Area. (This probably would no longer work, as www.transitinfo.org now
+has such a service. It could still make a worthwhile open-source
+project, though, and there are other metropolitan areas.) This would
+have some synergy with the rideshare trip-planning, too.
+
+So I found some people interested in helping, sent out design emails,
+grabbed BART and Caltrain schedules off the web, and started coding
+the bare bones of a public-transit search. I got it working and
+complete enough to start prototyping a website around it, and that's
+where things stalled. I was worn out from the job and commuting, and
+hoping the others would take over most of the work of building a web
+interface. Part of the problem was my code being in Scheme. Maybe more
+of it was my newness to multi-person project management. None of us
+ever did anything more, and now I have other fish to fry.
+
+Here's what code there is. Write to me if you have any interest in
+taking it further -- there's more to the idea than is written
+here. (Notably it needs geocoding using U.S. Census TIGER/line files
+-- I can help with that for anyone serious about this project. I used
+to do that kind of stuff at work.)
+
+
+Darius Bacon <darius@wry.me> 
+http://wry.me/~darius/software/ridarama/

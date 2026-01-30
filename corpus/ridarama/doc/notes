@@ -1,0 +1,6 @@
+time zones
+
+add this to .emacs to get emacs to indent variant-case closer to correctly:
+(add-hook 'scheme-mode-hook
+	  '(lambda () 
+	    (put 'variant-case 'scheme-indent-function 1)))

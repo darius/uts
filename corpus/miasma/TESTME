@@ -1,0 +1,22 @@
+$ uts
+-> (load "loadme.scm")
+"helpers.scm"
+"macro.scm"
+"random-macros.scm"
+"mword.scm"
+"test-helpers.scm"
+"bits.scm"
+"registers.scm"
+"parse.scm"
+"param.scm"
+"c-gen.scm"
+"python-gen.scm"
+"walk.scm"
+"test-bits.scm"
+"test-registers.scm"
+"test-parse.scm"
+"test-param.scm"
+"test-c-gen.scm"
+"test-walk.scm"
+-> (generate-c-assembler "c/asm.h")
+-> 

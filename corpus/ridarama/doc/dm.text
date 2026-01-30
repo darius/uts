@@ -1,0 +1,68 @@
+Data model:
+
+
+trip         = ride-segment list
+               [This says a trip is a list of ride-segments.]
+
+ride-segment = (ride, from: integer, to: integer) 
+	       where 0 <= from < to < length(ride)
+               [This says a ride-segment consists of a ride, a `from' 
+               (at which stop of the ride you got on), and a `to' (at
+               which you got off).]
+
+ride         = (route, stop list) 
+               where each stop begins after the previous one
+               [For instance, the Fremont->Richmond BART leaving at
+               11:17 Friday night is a ride.  Maybe we should give the
+               path taken between stops, too...]
+
+route        = (route-name, ride-schedule)
+               [Fill in what a ride-schedule is later -- it should
+               represent the set of all scheduled rides along this 
+               route.]
+
+stop         = (place, interval)
+
+interval     = (start-time, end-time)
+               where start-time <= end-time
+               [It'd be nice to know how precise this timing is...]
+
+place        = (name, location)
+
+location     = (latitude, longitude)
+
+
+plan-trip: trip-request -> trip option
+[This says that plan-trip is a function that takes a trip-request and
+gives you back a trip option.  A trip option in this notation means an
+optional trip -- I mean, it gives you a trip if possible, but it might
+give you nothing because there's no trip satisfying your constraints.]
+
+trip-request    = (origin: place, destination: place, time-constraint, metric)
+
+time-constraint = Leaving-at time | Arriving-at time
+                  [A time-constraint is one of two possibilities:
+                  either Leaving-at a time, or Arriving-at a time.]
+
+metric          = Shortest-time
+                  [And a metric has just one possibility right now;
+                  more flexibility definitely needed here.  A metric
+                  is a rule giving the `cost' of a proposed trip, so
+                  we can choose the `cheapest' -- which in the case 
+                  of the Shortest-time metric is the fastest trip.]
+
+
+I've been glossing over what a `time' is.  There should be both
+definite times (8:30am on April 7) and indefinite ones (8:30am on a
+weekday).
+
+That's not all that this model fails to capture.  Taking the first
+definition, a trip is a list of ride-segments, there's no way to 
+express a trip like ``Take your bike to the BART station, leave it
+locked in the Bikestation there, then take the BART to wherever'' --
+because a ride-segment doesn't say whether you have your bike or
+you've left it behind.  All we can say within this model is ``Take
+your bike to the BART station, then the BART to wherever''.  We ought
+to keep an eye out for other failings like this.
+
+Obviously this ignores carpooling too.
