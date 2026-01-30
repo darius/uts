@@ -24,77 +24,11 @@
 
 (test-section "Round-trip tests")
 
-;; Version of print-indented that writes to a port
-(define (print-indented-to-port x port)
-  (let ((column 0))
-
-    (define (nl)
-      (newline port)
-      (set! column 0))
-
-    (define (show str)
-      (display str port)
-      (set! column (+ column (string-length str))))
-
-    (define (output atom)
-      (show (coerce-string atom)))
-
-    (define (indent c)
-      (do ()
-          ((<= c column))
-        (show " ")))
-
-    (define (print x)
-      (cond ((not (pair? x))
-             (output x)
-             (nl))
-            (else
-             (let ((x (normalize-list x)))
-               (output (car x))
-               (let ((rest (cdr x)))
-                 (cond ((and (not (= (length rest) 1))
-                             (one-liner? (+ column 1) rest))
-                        (show ":")
-                        (print-one-line rest))
-                       (else
-                        (print-each rest))))))))
-
-    (define (normalize-list ls)
-      (if (pair? (car ls))
-          (cons (string->symbol "(") ls)
-          ls))
-
-    (define (one-liner? column ls)
-      (and (all atom? ls)
-           (<= (+ column (one-liner-length ls))
-               comfortable-width)))
-
-    (define (one-liner-length ls)
-      (+ (length ls)
-         (sum (map (compose string-length coerce-string) ls))))
-
-    (define (print-one-line ls)
-      (for-each (lambda (x)
-                  (show " ")
-                  (output x))
-                ls)
-      (nl))
-
-    (define (print-each ls)
-      (show " ")
-      (for-each (let ((c column))
-                  (lambda (arg)
-                    (indent c)
-                    (print arg)))
-                ls))
-
-    (print x)))
-
 ;; Round-trip test: S-expr -> indented -> S-expr
 (define (round-trip expr)
   (call-with-output-file "test-round-trip.tmp"
     (lambda (port)
-      (print-indented-to-port expr port)))
+      (print-indented expr port)))
   (parse-file "test-round-trip.tmp"))
 
 ;; Test cases that should round-trip correctly

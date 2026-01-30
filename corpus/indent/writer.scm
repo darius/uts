@@ -1,14 +1,15 @@
 (define comfortable-width 32)
 
-(define (print-indented x)
-  (let ((column 0))
+(define (print-indented x . opt-port)
+  (let ((port (if (null? opt-port) (current-output-port) (car opt-port)))
+        (column 0))
 
     (define (nl)
-      (newline)
+      (newline port)
       (set! column 0))
 
     (define (show str)
-      (display str)
+      (display str port)
       (set! column (+ column (string-length str))))
 
     (define (output atom)
