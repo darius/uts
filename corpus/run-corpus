@@ -1,0 +1,43 @@
+#!/bin/sh
+# Run all corpus tests
+# Usage: ./corpus/run-corpus
+
+set -e
+
+SCRIPTDIR="$(cd "$(dirname "$0")" && pwd)"
+UTSDIR="$(dirname "$SCRIPTDIR")"
+UTS="$UTSDIR/uts $UTSDIR/uts.fasl"
+
+run_test() {
+    dir=$1
+    shift
+    echo "=== $dir ==="
+    cd "$SCRIPTDIR/$dir"
+    "$@"
+    cd "$SCRIPTDIR"
+    echo ""
+}
+
+run_test scheme-data-structures $UTS -f test.scm
+
+run_test indent sh -c "echo '(load \"loadme.scm\") (print (try \"examples/factorial\"))' | $UTS"
+
+run_test consp sh -c "echo '(load \"loadme.scm\") (do-tests)' | $UTS"
+
+run_test ridarama sh -c "echo '(load \"loadme.scm\") (load \"fun-tests.scm\") (do-tests)' | $UTS 2>&1 | grep -E '(initialized|Error)'"
+
+echo "=== miasma ==="
+cd "$SCRIPTDIR/miasma"
+rm -f c/asm.h.new
+echo '(load "loadme.scm") (generate-c-assembler "c/asm.h.new")' | $UTS
+if [ -f c/asm.h.new ]; then
+    echo "Generated c/asm.h.new ($(wc -c < c/asm.h.new | tr -d ' ') bytes)"
+    rm c/asm.h.new
+else
+    echo "FAILED: c/asm.h.new not generated"
+    exit 1
+fi
+cd "$SCRIPTDIR"
+
+echo ""
+echo "=== All corpus tests passed ==="
