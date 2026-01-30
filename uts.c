@@ -81,7 +81,10 @@ static void
 fatal_error (const char *message)
 {
   fprintf (stderr, "Fatal error: %s\n", message);
+#ifndef NDEBUG
   __builtin_trap ();
+#endif
+  exit (1);
 }
 
 static void 
@@ -2375,7 +2378,9 @@ main (int argc, char **argv)
   /* but this keeps us from running multiple Interpreters... fix */
   set_global_value (string_to_symbol (c_string ("%command-line-args")),
 		    command_line_arglist (argc, argv));
- 
+
+  if (argc < 2)
+    fatal_error ("usage: uts uts.fasl [-f file.scm] [args]");
   run_fasl (argv [1]);
 
   /* Reestablish catcher clobbered by run_fasl() */
