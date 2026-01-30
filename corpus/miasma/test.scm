@@ -5,20 +5,16 @@
 
 (test-section "Miasma x86 assembler generator")
 
-;; Generate the C assembler header and verify it was created
+;; Generate the C assembler header
 (display "  Generating c/asm.h.test...") (newline)
 (generate-c-assembler "c/asm.h.test")
 
-;; Verify the file was created by trying to open it
-(call-with-input-file "c/asm.h.test"
-  (lambda (port)
-    (let ((c (read-char port)))
-      (check "generated header not empty"
-             #t
-             (char? c)))))
+;; Compare against reference
+(display "  Comparing against reference...") (newline)
+(let ((diff-result (%system "diff -q c/asm.h.test c/asm.h.reference")))
+  (check "generated matches reference" 0 diff-result))
 
-(display "  Generated and verified C assembler header") (newline)
-
-;; Note: can't easily delete the test file without delete-file primitive
+;; Clean up
+(%system "rm -f c/asm.h.test")
 
 (test-summary)
