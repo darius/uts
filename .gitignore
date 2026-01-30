@@ -1,3 +1,6 @@
+# Editor cruft
+*~
+
 # Build artifacts
 uts
 uts_opt
@@ -9,9 +12,11 @@ config.mk
 # Boehm GC (built from source)
 gc/
 
-# macOS
-.DS_Store
+# Analysis & data
 bench-results/
 coverage-results/
 *.profraw
 *.profdata
+
+# macOS
+.DS_Store
