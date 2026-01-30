@@ -1,4 +1,3 @@
-CC = gcc
 BASE_CFLAGS = -Wall
 
 # Include generated config if it exists
@@ -11,9 +10,9 @@ PREFIX ?= /usr/local
 
 # Release by default, debug with: make DEBUG=1
 ifdef DEBUG
-  CFLAGS = $(BASE_CFLAGS) -g2
+  CFLAGS = $(BASE_CFLAGS) -g
 else
-  CFLAGS = $(BASE_CFLAGS) -O2 -DNDEBUG
+  CFLAGS = $(BASE_CFLAGS) -g -O2 -DNDEBUG
 endif
 
 all: uts

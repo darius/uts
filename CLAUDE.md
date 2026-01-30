@@ -9,19 +9,25 @@ UTS is a Scheme bytecode interpreter written in C, targeting R4RS compliance. It
 ## Build Commands
 
 ```bash
-# Build debug version (with assertions, much slower)
+# Configure (auto-detects Boehm GC location)
+./configure
+
+# Build release version (default)
 make
 
-# Build fast/release version (no assertions)
-./makefast
+# Build debug version (with assertions, much slower)
+make DEBUG=1
 
 # Clean and rebuild
 rm -f uts instruc-cases.c && make
+
+# Install to /usr/local (or prefix set by configure)
+make install
 ```
 
 ## Dependencies
 
-- **Boehm GC**: Required. Must be installed in `gc/` subdirectory with `gc.h` and `gc.a`
+- **Boehm GC**: Required. The `configure` script auto-detects it from: local `gc/` subdirectory, pkg-config, or common prefixes (/usr/local, /opt/homebrew, /usr)
 - **GCC**: Required for `inline` functions and 64-bit `long long int` support
 - **AWK**: Required to generate `instruc-cases.c` from `instrucs.c`
 
@@ -146,7 +152,7 @@ Debugger commands: `?` help, `u` up, `d` down, `e` env, `n` next frame, `a` asse
 
 Benchmark results are stored in `bench-results/` with commit-stamped filenames. The baseline commit is tracked in `bench-results/baseline`.
 
-**Benchmarking methodology:** Always rebuild with `./makefast` before benchmarking. Run multiple iterations and discard the first (cold cache). Be skeptical of large speedups from small changes - verify by A/B testing both versions in the same session. System load, thermal throttling, and background processes can easily cause 20%+ variance.
+**Benchmarking methodology:** Always rebuild with `make` (release mode) before benchmarking. Run multiple iterations and discard the first (cold cache). Be skeptical of large speedups from small changes - verify by A/B testing both versions in the same session. System load, thermal throttling, and background processes can easily cause 20%+ variance.
 
 ## 64-bit Port
 
