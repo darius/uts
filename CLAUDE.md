@@ -137,6 +137,9 @@ Debugger commands: `?` help, `u` up, `d` down, `e` env, `n` next frame, `a` asse
 # Run test suite (47 tests)
 ./run-tests
 
+# Run corpus tests (real Scheme programs)
+./corpus/run-corpus
+
 # Run benchmarks (tak, fib, ack, sum, sum-fp, fac, superopt, um)
 ./run-bench
 
@@ -153,6 +156,15 @@ Debugger commands: `?` help, `u` up, `d` down, `e` env, `n` next frame, `a` asse
 Benchmark results are stored in `bench-results/` with commit-stamped filenames. The baseline commit is tracked in `bench-results/baseline`.
 
 **Benchmarking methodology:** Always rebuild with `make` (release mode) before benchmarking. Run multiple iterations and discard the first (cold cache). Be skeptical of large speedups from small changes - verify by A/B testing both versions in the same session. System load, thermal throttling, and background processes can easily cause 20%+ variance.
+
+**Corpus tests:** The `corpus/` directory contains real Scheme programs that exercise the interpreter more thoroughly than unit tests:
+- **scheme-data-structures**: Queue, pairing heap, trie, sets, string matching
+- **indent**: Indentation-based syntax parser and writer
+- **consp**: Capability-secure language implementation
+- **ridarama**: A* search transit planner (BART/Caltrain)
+- **miasma**: x86 assembler generator
+
+Tests compare output against reference files using `%system` to call external `diff`. Note: the interpreter checks most of its own work here, so bugs in core primitives could affect test reliability.
 
 ## 64-bit Port
 
