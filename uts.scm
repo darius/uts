@@ -1685,7 +1685,7 @@
   (define (load file)
     (call-with-input-file file
       (lambda (port)
-	(if (eqv? (peek-char port) #\#)
+	(if (eqv? (peek-char port) (integer->char #xFA)) ; fasl magic number, first byte
 	    (%load-fasl port)
 	    (let loop ()
 	      (let ((exp (read port)))

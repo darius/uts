@@ -1662,14 +1662,6 @@ read_unsigned8 (FILE *in)
   return c;
 }
 
-static int
-read_unsigned16 (FILE *in)
-{
-  int u1 = read_unsigned8 (in);
-  int u0 = read_unsigned8 (in);
-  return (u1 << 8) + u0;
-}
-
 static int64_t
 read_int (FILE *in)
 {
@@ -1690,21 +1682,12 @@ read_int (FILE *in)
 static void
 read_fasl_header (FILE *in)
 {
-  /* Skip (required) Unix #! line */
-  if (getc (in) != '#')
-    vm_error ("Not a fasl", nil);
-  for (;;) 
-    {
-      int c = getc (in);
-      if (c == '\n' || c == EOF)
-	break;
-    }
-  
-  /* Check magic number */
-  if (read_unsigned16 (in) != 0xFADD || read_unsigned16 (in) != 0xF00D)
+  if (read_unsigned8 (in) != 0xFA
+      || read_unsigned8 (in) != 0xDD
+      || read_unsigned8 (in) != 0xF0
+      || read_unsigned8 (in) != 0x0D)
     vm_error ("Wrong magic number", nil);
 
-  /* Check version number */
   if (read_unsigned8 (in) != MAJOR_VERSION
       || MINOR_VERSION < read_unsigned8 (in))
     vm_error ("Fasl produced by incompatible version", nil);

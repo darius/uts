@@ -2,8 +2,6 @@
 ;;;; Writing fasl files.
 ;;;; 
 
-(define interpreter-path "/home/me/src/scm/uts/uts")
-
 (define major-version 4)
 (define minor-version 0)
 
@@ -15,11 +13,6 @@
   (define (write-unsigned unsigned)
     (write-byte (quotient unsigned 256))
     (write-byte (remainder unsigned 256)))
-
-  ;; Unix #! line.
-  (display "#!" port)
-  (display interpreter-path port)
-  (newline port)
 
   ;; Magic number.
   (write-unsigned #xFADD)
