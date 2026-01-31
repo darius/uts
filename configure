@@ -131,7 +131,7 @@ fi
 } > config.mk
 
 # Write uts script
-here=$(dirname "$0")
+here="$(dirname "$(realpath "$0")")"
 echo ${here}/utsvm ${here}/uts.fasl '"$@"' >uts
 chmod +x uts
 
