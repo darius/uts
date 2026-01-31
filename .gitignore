@@ -20,3 +20,6 @@ coverage-results/
 
 # macOS
 .DS_Store
+
+# Claude
+.claude
