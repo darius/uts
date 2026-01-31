@@ -993,9 +993,9 @@
 			 (rest-args? (not (list? formals)))
 			 (fixed-formals (if (not rest-args?)
 					    formals
-					    (let loop ((f formals))
+					    (let sans-dot ((f formals))
 					      (if (pair? f)
-						  (cons (car f) (loop (cdr f)))
+						  (cons (car f) (sans-dot (cdr f)))
 						  (list f))))))
 		    (let ((var-count (length fixed-formals))
 			  (body-constants (constants/new)))
@@ -1345,10 +1345,8 @@
 	     (valid-formals? (map car (car rands)))))
 
 
-      ;; Backquote expansion
-      ;; Based on _Paradigms of AI Programming_ p. 824
-      ;; (corrected to expand nested quasiquotes as in R4RS,
-      ;; and to be hygienic)
+      ;; Backquote expansion: based on _Paradigms of AI Programming_ p. 824
+      ;; (adapted to expand nested quasiquotes as in R4RS, and for hygiene)
 
       (define (expand-quasiquote exp nesting)
 	(define (assert ok?)
