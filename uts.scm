@@ -225,23 +225,21 @@
 	  (fn (car lst)
 	      (loop (cdr lst))))))
 
-  (define member
-    (lambda (obj lst)
-      (let loop ((lst lst))
-	(cond ((null? lst) #f)
-	      ((equal? obj (car lst)) lst)
-	      (else (loop (cdr lst)))))))
+  (define (member obj lst)
+    (let loop ((lst lst))
+      (cond ((null? lst) #f)
+	    ((equal? obj (car lst)) lst)
+	    (else (loop (cdr lst))))))
 
-  (define assoc
-    (lambda (obj a-list)
-      (let loop ((a-list a-list))
-	(cond ((null? a-list) #f)
-	      ((equal? obj (car (car a-list)))
-	       (car a-list))
-	      (else (loop (cdr a-list)))))))
-
+  (define (assoc obj a-list)
+    (let loop ((a-list a-list))
+      (cond ((null? a-list) #f)
+	    ((equal? obj (car (car a-list)))
+	     (car a-list))
+	    (else (loop (cdr a-list))))))
 
   (define map
+    ;; ...whence the need to insulate this particular built-in this way?
     (letrec ((map
 	      (lambda (fn lst . lsts)
 		(cond
@@ -259,19 +257,18 @@
 			       (cons (apply fn (map car lsts)) result)))))))))
       map))
 
-  (define for-each
-    (lambda (fn lst . lsts)
-      (cond
-        ((null? lsts)		; special-case for speed
-	 (let loop ((lst lst))
-	   (cond ((not (null? lst))
-		  (fn (car lst))
-		  (loop (cdr lst))))))
-	(else
-	 (let loop ((lsts (cons lst lsts)))
-	   (cond ((not (null? (car lsts)))
-		  (apply fn (map car lsts))
-		  (loop (map cdr lsts)))))))))
+  (define (for-each fn lst . lsts)
+    (cond
+     ((null? lsts)		; special-case for speed
+      (let loop ((lst lst))
+	(cond ((not (null? lst))
+	       (fn (car lst))
+	       (loop (cdr lst))))))
+     (else
+      (let loop ((lsts (cons lst lsts)))
+	(cond ((not (null? (car lsts)))
+	       (apply fn (map car lsts))
+	       (loop (map cdr lsts))))))))
 
 
   ; Numbers
@@ -592,13 +589,11 @@
     
 
     ;; White space
-    (for-each 
-     (lambda (white) 
-       (install-read-macro white 
-	 (lambda (in-port char) 
-	   (@skip-blanks in-port)
-	   (read in-port))))
-     '(#\space #\tab #\newline #\return))
+    (let ((read-after (lambda (in-port char) 
+	                (@skip-blanks in-port)
+	                (read in-port))))
+      (for-each (lambda (white) (install-read-macro white read-after))
+	        '(#\space #\tab #\newline #\return)))
 
     (install-read-macro #\;
       (lambda (in-port char)
@@ -699,12 +694,11 @@
 
 (define unspecified (string->symbol "#!unspecified"))
 
-(define andmap
-  (lambda (test? ls)
-    (if (null? ls)
-	#t
-	(and (test? (car ls))
-	     (andmap test? (cdr ls))))))
+(define (andmap test? ls)
+  (if (null? ls)
+      #t
+      (and (test? (car ls))
+	   (andmap test? (cdr ls)))))
 
 
 ;;;;
@@ -718,26 +712,24 @@
   (define lexical-address/offset cdr)
 
   ;; Return the lexical address, or v itself if free.
-  (define lexical-env/lookup
-    (lambda (s v)
-      (let nesting ((depth 0)
-		    (s s))
-	(if (null? s)
-	    v
-	    (let searching ((vars (car s))
-			    (index 0))
-	      (cond ((null? vars)
-		     (nesting (+ depth 1) (cdr s)))
-		    ((eq? (car vars) v)
-		     (make-lexical-address depth index))
-		    (else
-		     (searching (cdr vars) (+ index 1)))))))))
+  (define (lexical-env/lookup s v)
+    (let nesting ((depth 0)
+		  (s s))
+      (if (null? s)
+	  v
+	  (let searching ((vars (car s))
+			  (index 0))
+	    (cond ((null? vars)
+		   (nesting (+ depth 1) (cdr s)))
+		  ((eq? (car vars) v)
+		   (make-lexical-address depth index))
+		  (else
+		   (searching (cdr vars) (+ index 1))))))))
 
   (define lexical-env/empty '())
 
-  (define lexical-env/extend
-    (lambda (s vals)
-      (cons vals s))))
+  (define (lexical-env/extend s vals)
+    (cons vals s)))
 
 
 ;;;;
@@ -750,27 +742,24 @@
   ;;; Constants tables
   ;;;
 
-  (define constants/new
-    (lambda () 
-      (cons 0 '())))
+  (define (constants/new)
+    (cons 0 '()))
 
-  (define constants/lookup
-    (lambda (datum constants)
-      (cond ((assv datum (cdr constants))
-	     => cdr)
-	    (else
-	     (let ((c (car constants)))
-	       (set-car! constants (+ c 1))
-	       (set-cdr! constants (cons (cons datum c) (cdr constants)))
-	       c)))))
+  (define (constants/lookup datum constants)
+    (cond ((assv datum (cdr constants))
+	   => cdr)
+	  (else
+	   (let ((c (car constants)))
+	     (set-car! constants (+ c 1))
+	     (set-cdr! constants (cons (cons datum c) (cdr constants)))
+	     c))))
 
-  (define constants->vector
-    (lambda (constants)
-      (let ((vec (make-vector (car constants) #f)))
-	(for-each (lambda (pair)
-		    (vector-set! vec (cdr pair) (car pair)))
-		  (cdr constants))
-	vec)))
+  (define (constants->vector constants)
+    (let ((vec (make-vector (car constants) #f)))
+      (for-each (lambda (pair)
+		  (vector-set! vec (cdr pair) (car pair)))
+		(cdr constants))
+      vec))
 
 
   ;;;
@@ -837,121 +826,101 @@
   (define lap/restore 
     (list @%restore))
 
-  (define lap/offset
-    (lambda (pos lap)
-      (let ((offset (- (lap/position lap) pos)))
-	(cons (quotient offset 256)
-	      (cons (remainder offset 256)
-		    lap)))))
-
-  (define lap/jump
-    (lambda (pos lap)
-      (cons @%jump
-	    (lap/offset pos lap))))
-
-  (define lap/if-false
-    (lambda (pos lap)
-      (cons @%if-false
-	    (lap/offset pos lap))))
-
-  (define lap/varref
-    (lambda (addr lap)
-      (cons @%varref
-	    (cons (lexical-address/depth addr)
-		  (cons (lexical-address/offset addr)
-			lap)))))
-
-  (define lap/varset
-    (lambda (addr lap)
-      (cons @%varset
-	    (cons (lexical-address/depth addr)
-		  (cons (lexical-address/offset addr)
-			lap)))))
-
-  (define lap/extend-normal-env
-    (lambda (count lap)
-      (cons @%extend-normal-env
-	    (cons count lap))))
-
-  (define lap/extend-&rest-env
-    (lambda (count lap)
-      (cons @%extend-&rest-env
-	    (cons count lap))))
-
-  (define lap/save
-    (lambda (pos lap)
-      (cons @%save 
-	    (lap/offset pos lap))))
-
-  (define lap/invoke
-    (lambda (lap)
-      (cons @%invoke lap)))
-
-  (define lap/drop
-    (lambda (lap)
-      (cons @%drop lap)))
-
-  (define lap/prim-0
-    (lambda (prim lap)
-      (cons @%prim-0
-	    (cons prim lap))))
-
-  (define lap/prim-1
-    (lambda (prim lap)
-      (cons @%prim-1
-	    (cons prim lap))))
-
-  (define lap/prim-2
-    (lambda (prim lap)
-      (cons @%prim-2
-	    (cons prim lap))))
-
-  (define lap/prim-3
-    (lambda (prim lap)
-      (cons @%prim-3
-	    (cons prim lap))))
-
-  (define do-prim
-    (lambda (pe rands k prim)
-      (@reduce pe 
-	       ((case (length rands)
-		  ((0) lap/prim-0)
-		  ((1) lap/prim-1)
-		  ((2) lap/prim-2)
-		  ((3) lap/prim-3))
-		prim
-		k)
-	       rands)))
-
-  (define lap/lit
-    (lambda (datum constants lap)
-      (cons @%lit
-	    (cons (constants/lookup datum constants) 
+  (define (lap/offset pos lap)
+    (let ((offset (- (lap/position lap) pos)))
+      (cons (quotient offset 256)
+	    (cons (remainder offset 256)
 		  lap))))
 
-  (define lap/global-ref
-    (lambda (symbol constants lap)
-      (cons @%global-ref
-	    (cons (constants/lookup symbol constants) 
-		  lap))))
+  (define (lap/jump pos lap)
+    (cons @%jump
+	  (lap/offset pos lap)))
 
-  (define lap/global-set
-    (lambda (symbol constants lap)
-      (cons @%global-set
-	    (cons (constants/lookup symbol constants) 
-		  lap))))
+  (define (lap/if-false pos lap)
+    (cons @%if-false
+	  (lap/offset pos lap)))
 
-  (define lap/global-define
-    (lambda (symbol constants lap)
-      (cons @%global-define
-	    (cons (constants/lookup symbol constants) 
-		  lap))))
+  (define (lap/varref addr lap)
+    (cons @%varref
+	  (cons (lexical-address/depth addr)
+		(cons (lexical-address/offset addr)
+		      lap))))
 
-  (define lap/proc
-    (lambda (code constants lap)
-      (cons @%proc
-	    (cons (constants/lookup code constants)
-		  lap))))
+  (define (lap/varset addr lap)
+    (cons @%varset
+	  (cons (lexical-address/depth addr)
+		(cons (lexical-address/offset addr)
+		      lap))))
+
+  (define (lap/extend-normal-env count lap)
+    (cons @%extend-normal-env
+	  (cons count lap)))
+
+  (define (lap/extend-&rest-env count lap)
+    (cons @%extend-&rest-env
+	  (cons count lap)))
+
+  (define (lap/save pos lap)
+    (cons @%save 
+	  (lap/offset pos lap)))
+
+  (define (lap/invoke lap)
+    (cons @%invoke lap))
+
+  (define (lap/drop lap)
+    (cons @%drop lap))
+
+  (define (lap/prim-0 prim lap)
+    (cons @%prim-0
+	  (cons prim lap)))
+
+  (define (lap/prim-1 prim lap)
+    (cons @%prim-1
+	  (cons prim lap)))
+
+  (define (lap/prim-2 prim lap)
+    (cons @%prim-2
+	  (cons prim lap)))
+
+  (define (lap/prim-3 prim lap)
+    (cons @%prim-3
+	  (cons prim lap)))
+
+  (define (do-prim pe rands k prim)
+    (@reduce pe 
+	     ((case (length rands)
+		((0) lap/prim-0)
+		((1) lap/prim-1)
+		((2) lap/prim-2)
+		((3) lap/prim-3))
+	      prim
+	      k)
+	     rands))
+
+  (define (lap/lit datum constants lap)
+    (cons @%lit
+	  (cons (constants/lookup datum constants) 
+		lap)))
+
+  (define (lap/global-ref symbol constants lap)
+    (cons @%global-ref
+	  (cons (constants/lookup symbol constants) 
+		lap)))
+
+  (define (lap/global-set symbol constants lap)
+    (cons @%global-set
+	  (cons (constants/lookup symbol constants) 
+		lap)))
+
+  (define (lap/global-define symbol constants lap)
+    (cons @%global-define
+	  (cons (constants/lookup symbol constants) 
+		lap)))
+
+  (define (lap/proc code constants lap)
+    (cons @%proc
+	  (cons (constants/lookup code constants)
+		lap)))
 
 
   (define gensym
@@ -1469,24 +1438,20 @@
 	    (codify lap (constants->vector constants) #f))))))
 
 
-  (define @make-code-vector
-    (lambda (constants-vec bytes label)
-      (vector 'code-vector constants-vec bytes label 0)))
+  (define (@make-code-vector constants-vec bytes label)
+    (vector 'code-vector constants-vec bytes label 0))
 
-  (define codify
-    (lambda (lap constants-vec label)
-      (@make-code-vector constants-vec
-			 (list->string (map integer->char lap))
-			 label)))
+  (define (codify lap constants-vec label)
+    (@make-code-vector constants-vec
+		       (list->string (map integer->char lap))
+		       label))
 
-  (define compile-to-closure
-    (lambda (form)
-      (@make-closure '#() 
-		     (parse-form form))))
+  (define (compile-to-closure form)
+    (@make-closure '#() 
+		   (parse-form form)))
 
-  (define compile-and-run
-    (lambda (form)
-      ((compile-to-closure form)))))
+  (define (compile-and-run form)
+    ((compile-to-closure form))))
 
 
 
@@ -1629,22 +1594,20 @@
   ;;; Generate code defining fixed-arity primitives.
   ;;;
 
-  (define variable-arity?
-    (lambda (prim-name)
-      (memq prim-name variable-arity-prim-list)))
+  (define (variable-arity? prim-name)
+    (memq prim-name variable-arity-prim-list))
 
-  (define prim-def-source-code
-    (lambda (prim-names args)
-      `(begin
-	 ,@(@reduce (lambda (prim-name defs)
-		      (if (variable-arity? prim-name)
-			  defs
-			  (cons `(define ,prim-name
-				   (lambda ,args
-				     (,prim-name ,@args)))
-				defs)))
-		    '()
-		    prim-names))))
+  (define (prim-def-source-code prim-names args)
+    `(begin
+       ,@(@reduce (lambda (prim-name defs)
+		    (if (variable-arity? prim-name)
+			defs
+			(cons `(define ,prim-name
+				 (lambda ,args
+				   (,prim-name ,@args)))
+			      defs)))
+		  '()
+		  prim-names)))
 
   (define closure-for-apply
     (@make-closure '#()
@@ -1661,19 +1624,17 @@
 			    '#()
 			    'call-with-current-continuation)))
 
-  (define all-primitive-defs
-    (lambda ()
-      `(begin
-	 ,(prim-def-source-code (map car prim-0-list) '())
-	 ,(prim-def-source-code (map car prim-1-list) '(x))
-	 ,(prim-def-source-code (map car prim-2-list) '(x y))
-	 ,(prim-def-source-code (map car prim-3-list) '(x y z))
-	 (define apply ',closure-for-apply)
-	 (define call-with-current-continuation ',closure-for-call/cc))))
+  (define (all-primitive-defs)
+    `(begin
+       ,(prim-def-source-code (map car prim-0-list) '())
+       ,(prim-def-source-code (map car prim-1-list) '(x))
+       ,(prim-def-source-code (map car prim-2-list) '(x y))
+       ,(prim-def-source-code (map car prim-3-list) '(x y z))
+       (define apply ',closure-for-apply)
+       (define call-with-current-continuation ',closure-for-call/cc)))
 
-  (define write-fasl-startup-prelude
-    (lambda (out-port)
-      (%write-fasl (parse-form (all-primitive-defs)) out-port)))
+  (define (write-fasl-startup-prelude out-port)
+    (%write-fasl (parse-form (all-primitive-defs)) out-port))
 
   ;;;
   ;;; Compile a file
@@ -1749,7 +1710,7 @@
 
   ; Read-eval-print loop.
 
-  (define %reset 
+  (define %reset                ; (this definition will be reassigned)
     (lambda (val)
       (display "*** ERROR DURING STARTUP." (current-output-port))
       (newline (current-output-port))
@@ -1770,11 +1731,10 @@
 		     (repl-print (%eval exp))
 		     (loop))))))))
 
-  (define repl-print
-    (lambda (obj)
-      (cond ((not (eq? obj unspecified))
-	     (write obj)
-	     (newline)))))
+  (define (repl-print obj)
+    (cond ((not (eq? obj unspecified))
+	   (write obj)
+	   (newline))))
 
   (define (@complain error-type message irritants)
     (newline) 
