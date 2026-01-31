@@ -35,40 +35,35 @@ make install
 
 ```bash
 # Start REPL
-./uts uts.fasl
+./uts
 
 # Run a Scheme file
-./uts uts.fasl -f program.scm arg1 arg2
+./uts -f program.scm arg1 arg2
 
-# Rebuild uts.fasl from sources (from within REPL)
+# Rebuild uts.fasl (needed by ./uts) from sources (from within REPL)
 (load "write-fasl.scm")
 (build-system "uts.scm" "uts.fasl")
 ```
 
 ## Bootstrap / Rebuilding uts.fasl
 
-The compiled `uts.fasl` is needed to compile itself - it's a bootstrap dependency. When making changes that affect both `uts.c` and `uts.scm`:
+The compiled `uts.fasl` is needed to compile itself - it's a bootstrap dependency. When making changes that affect both `utsvm.c` and `uts.scm`:
 
-1. **Simple changes**: Just rebuild fasl with `(load "write-fasl.scm") (build-system "uts.scm" "uts.fasl")`
+1. **Simple changes**: Just rebuild fasl with ./rebuild-fasl
 
 2. **Changes to primitive names or C/Scheme interface**:
    - Keep old fasl working first (support both old and new names)
    - Rebuild fasl while old names still work
    - Then switch C to new names and rebuild C
-   - Rebuild fasl again with new prim-lists: load uts.scm first to get updated prim-lists, then build
+   - Rebuild fasl again with new prim-lists: follow the same process as rebuild-fasl does, but load uts.scm first to get updated prim-lists
 
-   ```bash
-   # With proper prim-list update:
-   ./uts uts.fasl -e '(load "write-fasl.scm") (load "uts.scm") (build-system "uts.scm" "uts.fasl")'
-   ```
-
-3. **If fasl becomes broken**: Restore from git with `git checkout HEAD -- uts.fasl`
+3. **If fasl becomes broken**: Restore from uts.fasl.backup or from git with `git checkout HEAD -- uts.fasl`
 
 ## Architecture
 
 ### Core Components
 
-- **uts.c**: Main C interpreter with bytecode VM, object representation, reader/writer, and garbage collection interface
+- **utsvm.c**: Main C interpreter with bytecode VM, object representation, reader/writer, and garbage collection interface
 - **instrucs.c**: Bytecode instruction implementations (processed by `make-instrucs.awk` into `instruc-cases.c`)
 - **uts.scm**: Complete Scheme runtime - standard library, compiler, REPL, debugger, and disassembler (all in one file)
 - **config.h**: Platform-specific configuration (word sizes, stack limits)

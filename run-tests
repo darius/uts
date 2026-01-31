@@ -3,9 +3,8 @@
 
 set -e
 cd "$(dirname "$0")"
-export DYLD_LIBRARY_PATH=./gc/.libs
 
-result=$(./uts uts.fasl -f test.scm 2>&1)
+result=$(./uts -f test.scm 2>&1)
 
 passed=$(echo "$result" | grep "^Tests passed:" | awk '{print $3}')
 failed=$(echo "$result" | grep "^Tests failed:" | awk '{print $3}')

@@ -15,24 +15,24 @@ else
   CFLAGS = $(BASE_CFLAGS) -g -O2 -DNDEBUG
 endif
 
-all: uts
+all: utsvm
 
-uts: uts.c instruc-cases.c config.h
-	$(CC) $(CFLAGS) $(GC_CFLAGS) uts.c $(GC_LIBS) -lm -o uts
+utsvm: utsvm.c instruc-cases.c config.h
+	$(CC) $(CFLAGS) $(GC_CFLAGS) utsvm.c $(GC_LIBS) -lm -o utsvm
 
 instruc-cases.c: instrucs.c make-instrucs.awk
 	awk -f make-instrucs.awk instrucs.c >instruc-cases.c
 
 clean:
-	rm -f uts instruc-cases.c
+	rm -f utsvm instruc-cases.c
 
-install: uts uts.fasl
+install: utsvm uts.fasl
 	mkdir -p $(PREFIX)/lib/uts $(PREFIX)/bin
-	cp uts uts.fasl $(PREFIX)/lib/uts/
-	printf '#!/bin/sh\nexec $(PREFIX)/lib/uts/uts $(PREFIX)/lib/uts/uts.fasl "$$@"\n' > $(PREFIX)/bin/uts
+	cp utsvm uts.fasl $(PREFIX)/lib/uts/
+	printf '#!/bin/sh\nexec $(PREFIX)/lib/uts/utsvm $(PREFIX)/lib/uts/uts.fasl "$$@"\n' > $(PREFIX)/bin/uts
 	chmod +x $(PREFIX)/bin/uts
 
 uninstall:
-	rm -rf $(PREFIX)/lib/uts $(PREFIX)/bin/uts
+	rm -rf $(PREFIX)/lib/utsvm $(PREFIX)/bin/uts
 
 .PHONY: all clean install uninstall

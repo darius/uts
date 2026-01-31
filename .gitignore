@@ -3,14 +3,12 @@
 
 # Build artifacts
 uts
-uts_opt
+utsvm
 instruc-cases.c
 config.mk
 *.o
 *.dSYM/
-
-# Boehm GC (built from source)
-gc/
+uts.fasl.backup
 
 # Analysis & data
 bench-results/
@@ -21,5 +19,13 @@ coverage-results/
 # macOS
 .DS_Store
 
+# Me
+attic/
+
 # Claude
-.claude
+.claude/
+chats/
+
+# Boehm GC (Claude currently keeps it locally)
+gc/
+

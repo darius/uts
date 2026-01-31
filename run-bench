@@ -23,7 +23,7 @@ run_one() {
 
     local tmpfile=$(mktemp)
     local start=$(python3 -c 'import time; print(time.time())')
-    echo "$expr" | ./uts uts.fasl > "$tmpfile" 2>&1
+    echo "$expr" | ./uts > "$tmpfile" 2>&1
     local end=$(python3 -c 'import time; print(time.time())')
     local elapsed=$(python3 -c "print(f'{$end - $start:.4f}')")
 
