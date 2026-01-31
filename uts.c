@@ -1713,7 +1713,7 @@ read_fasl_header (FILE *in)
 static Object 
 undump_string (FILE *in)
 {
-  int i, n = read_int (in);	/* unsigned16 instead? */
+  int i, n = read_int (in);
   Object str = make_string (n);
   unsigned char *s = string_ptr (str);
   for (i = 0; i < n; ++i)
