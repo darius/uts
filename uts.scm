@@ -1721,18 +1721,19 @@
 	     (string=? (cadr %command-line-args) "-f"))
 	(load (caddr %command-line-args))
 	(begin
+          ;; In editing the following, stay conscious of what will appear
+          ;; in backtraces on error. We want only one repl frame there.
 	  (call-with-current-continuation (lambda (k) (set! %reset k)))
-	  (let loop ()
+          (let repl ()
 	    (display "-> ")
 	    (let ((exp (read)))
-	      (cond ((not (eof-object? exp))
-		     (repl-print (%eval exp))
-		     (loop))))))))
-
-  (define (repl-print obj)
-    (cond ((not (eq? obj unspecified))
-	   (write obj)
-	   (newline))))
+              (if (eof-object? exp)
+                  (newline)
+		  (let ((obj (%eval exp)))
+                    (cond ((not (eq? obj unspecified))
+	                   (write obj)
+	                   (newline)))
+	            (repl))))))))
 
   (define (@complain error-type message irritants)
     (newline) 
