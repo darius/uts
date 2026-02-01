@@ -24,7 +24,7 @@ build_cov() {
 run_tests_cov() {
     echo "Running tests..."
     rm -f default.profraw
-    LLVM_PROFILE_FILE="test.profraw" ./uts -f test.scm > /dev/null 2>&1 || true
+    LLVM_PROFILE_FILE="test.profraw" ./uts -f test/test.scm > /dev/null 2>&1 || true
 }
 
 run_bench_cov() {
