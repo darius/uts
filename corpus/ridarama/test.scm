@@ -6,7 +6,8 @@
 
 ;; Run the A* search test and compare output against reference
 (display "  Running do-tests (A* search)...") (newline)
-(let ((diff-result (%system "../../uts ../../uts.fasl -f run-search.scm 2>&1 | grep -v '\"' > output.test && diff -q output.test output.reference")))
+;; N.B. The env var UTS is set by ../run-corpus
+(let ((diff-result (%system "$UTS -f run-search.scm 2>&1 | grep -v '\"' > output.test && diff -q output.test output.reference")))
   (check "search output matches reference" 0 diff-result))
 
 ;; Clean up

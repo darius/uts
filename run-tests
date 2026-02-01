@@ -1,10 +1,11 @@
 #!/bin/bash
 # Run test suite, minimal output on success
+# TODO unify with test/run-tests which runs more than just test/test.scm
 
 set -e
-cd "$(dirname "$0")"
+cd "$(dirname "$0")"/test
 
-result=$(./uts -f test.scm 2>&1)
+result=$(../uts -f test.scm 2>&1)
 
 passed=$(echo "$result" | grep "^Tests passed:" | awk '{print $3}')
 failed=$(echo "$result" | grep "^Tests failed:" | awk '{print $3}')

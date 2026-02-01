@@ -1,4 +1,4 @@
-;;; examples.scm - Miscellaneous examples and supplemental tests
+;;; examples.scm - Miscellaneous examples and supplemental tests, by Claude.
 ;;;
 ;;; These demonstrate Scheme features and serve as additional test coverage.
 

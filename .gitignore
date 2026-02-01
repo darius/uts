@@ -21,6 +21,8 @@ coverage-results/
 
 # Me
 attic/
+corpus-inbox/
+explorations/
 
 # Claude
 .claude/

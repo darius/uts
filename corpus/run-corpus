@@ -6,7 +6,7 @@ set -e
 
 SCRIPTDIR="$(cd "$(dirname "$0")" && pwd)"
 UTSDIR="$(dirname "$SCRIPTDIR")"
-UTS="$UTSDIR/uts $UTSDIR/uts.fasl"
+export UTS="$UTSDIR/uts"
 
 run_test() {
     dir=$1

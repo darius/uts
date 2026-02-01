@@ -25,6 +25,7 @@ instruc-cases.c: instrucs.c make-instrucs.awk
 
 clean:
 	rm -f utsvm instruc-cases.c
+	rm -f test/tmp[123]
 
 install: utsvm uts.fasl
 	mkdir -p $(PREFIX)/lib/uts $(PREFIX)/bin
