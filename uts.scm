@@ -2117,7 +2117,8 @@
 
       (define (prompt-and-read prompt)
 	(display prompt)
-	(read))
+	(let ((obj (read)))
+          (if (eof-object? obj) 'quit obj)))
 
       (define (say message)
 	(display message)
