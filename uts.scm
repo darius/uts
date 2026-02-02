@@ -933,7 +933,8 @@
   (define *open-code-primitives?* #t)
 
 
-  ; (PARSE-FORM form) returns a compiled code vector for a top-level form.
+  ;; (PARSE-FORM form) returns a compiled code vector for a top-level form.
+  ;; The code will assume no params and an empty lexical environment ("top-level").
   (define parse-form 
     (let ()
 
@@ -1444,13 +1445,9 @@
 		       (list->string (map integer->char lap))
 		       label))
 
-  (define (compile-to-closure form)
-    (@make-closure '#() 
-		   (parse-form form)))
-
-  (define (compile-and-run form)
-    ((compile-to-closure form))))
-
+  (define (%eval form)
+    ;; Compile to a top-level procedure with no params, and call it.
+    ((@make-closure '#() (parse-form form)))))
 
 
 ;;;;
@@ -1678,9 +1675,7 @@
 
 (begin
 
-  ; Eval and loading
-
-  (define %eval compile-and-run)
+  ; Loading
 
   (define (load file)
     (call-with-input-file file
