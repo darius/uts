@@ -442,7 +442,7 @@ open_file (Object filename, Tag tag, const char *mode)
   
 
 static Object current_input_port, current_output_port;
-static Object reified_cont_code, final_valcont_code;
+static Object halt_code, just_invoke_code, reified_cont_code;
 static Object code_vector_symbol;
 static Object fasl_stack;
 static Object global_lex_env;
@@ -1989,7 +1989,6 @@ prim_string_to_number (Object x1, Object x0)
 
 
 static Object error_symbol;
-static Object just_invoke_code;
 static Object all_entered_code_vectors_symbol;
 
 static void 
@@ -2014,9 +2013,9 @@ setup (void)
   {
     Object b = make_string (1);
     string_ptr (b) [0] = 22;
-    final_valcont_code = 
+    halt_code = 
       make_code_vector (global_lex_env, b,
-			string_to_symbol (c_string ("final-valcont-code")));
+			string_to_symbol (c_string ("halt_code")));
   }
 
   {
@@ -2024,7 +2023,7 @@ setup (void)
     string_ptr (b) [0] = 12;
     just_invoke_code = 
       make_code_vector (global_lex_env, b,
-			string_to_symbol (c_string ("just-invoke-code")));
+			string_to_symbol (c_string ("just_invoke_code")));
   }
 
   {
@@ -2033,7 +2032,7 @@ setup (void)
     memcpy (string_ptr (str), t46, sizeof t46);
     reified_cont_code = 
       make_code_vector (global_lex_env, str, 
-			string_to_symbol (c_string ("reify-cont-code")));
+			string_to_symbol (c_string ("reified_cont_code")));
   }    
 }
 
@@ -2257,7 +2256,7 @@ interpret (Object code, Object lex_env)
   i.stack_ptr = 0;
   i.frame_ptr = 0;
 
-  push_frame (&i, final_valcont_code, global_lex_env, 0);
+  push_frame (&i, halt_code, global_lex_env, 0);
 
   if (0 == setjmp (vm_error_catch_point)) 
     return enter_interpreter (&i);
@@ -2298,6 +2297,7 @@ interpret (Object code, Object lex_env)
   }
 }
 
+/* Call closure with no parameters. */
 static Object
 invoke0 (Object closure)
 {

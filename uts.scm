@@ -2001,9 +2001,11 @@
 
 (begin
 
-  ;;;
-  ;;; Lexical environments
-  ;;;
+  ;;; The parts of a closure: lexical environment and code object.
+  ;;; The env is a linked list of env frames, where each frame is
+  ;;; represented by a vector with the link in slot 0.
+  ;;; The code object holds "actual code" for the vm interpreter, plus
+  ;;; 'owner' (human-readable full name) for the debugger.
 
   (define (environment? x)
     (vector? x))
@@ -2016,11 +2018,6 @@
 
   (define (env->inner-frame env)
     (cdr (vector->list env)))
-
-
-  ;;;
-  ;;; Code objects
-  ;;;
 
   (define (code? x)
     (and (vector? x)
@@ -2036,13 +2033,12 @@
   (define code->profile   (vector-ref-at 4))
 
 
-  ;;;
   ;;; Continuations
-  ;;;
+  ;;; Implemented as a procedure with magical bytecode, with the interpreter's
+  ;;; stack saved as a Scheme vector in the closure's lex-env slot.
 
   (define continuation? 
-    (let ((cont-code
-	   (call-with-current-continuation @closure->code)))
+    (let ((cont-code (call-with-current-continuation @closure->code)))
       (lambda (obj)
 	(and (procedure? obj)
 	     (eq? (@closure->code obj) cont-code)))))
@@ -2051,9 +2047,8 @@
     (vector-ref (@closure->lex-env cont) 1))
 
 
-  ;;;
-  ;;; Continuation stack frames
-  ;;;
+  ;;; Continuation stack frames: contiguous segments of a stack vector (svec),
+  ;;; each designated by an index (sptr) pointing just after the segment.
 
   (define (make-frame svec sptr)
     (list svec sptr))
@@ -2066,43 +2061,40 @@
       (let ((x (vector-ref (frame/svec frame) (- (frame/sptr frame) offset))))
 	(if (ok? x)
 	    x
-	    ;; Keep this debug-the-debugger stuff in for a bit...
 	    (%error "Bad ref to" tag x)))))
 
-  (define frame/base     (frame/ref 1 'base integer?))
-
-  (define frame->lex-env (frame/ref 2 'env environment?))
-  (define frame->code    (frame/ref 3 'code code?))
   (define frame->pc      (frame/ref 4 'pc integer?))
+  (define frame->code    (frame/ref 3 'code code?))
+  (define frame->lex-env (frame/ref 2 'env environment?))
+  (define frame->base    (frame/ref 1 'base integer?)) ; value is the index of the start of this segment
 
-  ;; Return the local stack elements as a list, with top of stack first.
-  (define (frame->stack frame)
-    (let ((base (frame/base frame)))
-      (let loop ((i (- (frame/sptr frame) 5)) 
-		 (acc '()))
-	(if (< i base)
-	    acc
-	    (loop (- i 1) 
-		  (cons (vector-ref (frame/svec frame) i) acc))))))
-
+  ;; The caller is the next frame to the left of the base; or #f
+  ;; for the final frame, a halt_code sentinel of no interest.
   (define (frame->caller frame)
-    (if (= (frame/base frame) 0)
-	#f
-	(make-frame (frame/svec frame) (frame/base frame))))
+    (let ((caller (make-frame (frame/svec frame) (frame->base frame))))
+      (if (= (frame->base caller) 0)
+          #f
+          caller)))
+
+  ;; Return the local stack elements as a list, with bottom of stack first.
+  (define (frame->stack frame)
+    (let ((svec (frame/svec frame))
+          (base (frame->base frame)))
+      (do ((sp (- (frame/sptr frame) 5)
+               (- sp 1))
+	   (acc '()
+                (cons (vector-ref svec sp) acc)))
+	  ((< sp base) acc))))
 
   ;; Return a list of the frame and all its successive callers, with
   ;; the final caller first.
   (define (caller* frame)
-    (let loop ((frame frame) (ls (list frame)))
-      (let ((caller (frame->caller frame)))
-	(if caller
-	    (loop caller (cons caller ls))
-	    ls))))
+    (do ((frame frame (frame->caller frame))
+         (ls '() (cons frame ls)))
+        ((not frame) ls)))
 
 
-  ;;;
   ;;; The interactive debugger
-  ;;;
 
   (define (debug)
     (if (continuation? %error-cont)
