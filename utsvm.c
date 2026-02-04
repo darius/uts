@@ -2335,7 +2335,7 @@ command_line_arglist (int argc, char **argv)
 {
   Object arglist = nil;
   int i;
-  for (i = argc - 1; 1 <= i; --i)
+  for (i = argc - 1; 0 <= i; --i)
     arglist = cons (c_string (argv [i]), arglist);
   return arglist;
 }
@@ -2358,12 +2358,11 @@ main (int argc, char **argv)
     unexpected_vm_error ();
   setup ();
 
-  /* but this keeps us from running multiple Interpreters... fix */
-  set_global_value (string_to_symbol (c_string ("%command-line-args")),
+  set_global_value (string_to_symbol (c_string ("%command-line-arguments")),
 		    command_line_arglist (argc, argv));
 
   if (argc < 2)
-    fatal_error ("usage: uts uts.fasl [-f file.scm] [args]");
+    fatal_error ("usage: utsvm uts.fasl [file.scm] [args]");
   run_fasl (argv [1]);
 
   /* Reestablish catcher clobbered by run_fasl() */
@@ -2371,7 +2370,7 @@ main (int argc, char **argv)
     unexpected_vm_error ();
 
   { /* Start the main loop if the fasl set one up */
-    Object driver = string_to_symbol (c_string ("@driver-loop"));
+    Object driver = string_to_symbol (c_string ("@start-scheming"));
     Object proc = global_value (driver);
     if (is_closure (proc))
       invoke0 (proc);

@@ -14,7 +14,7 @@ run_test() {
     echo "Testing: $dir"
     echo "========================================"
     cd "$SCRIPTDIR/$dir"
-    $UTS -f test.scm
+    $UTS test.scm
     echo ""
 }
 

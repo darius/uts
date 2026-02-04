@@ -5,7 +5,7 @@
 set -e
 cd "$(dirname "$0")"/test
 
-result=$(../uts -f test.scm 2>&1)
+result=$(../uts test.scm 2>&1)
 
 passed=$(echo "$result" | grep "^Tests passed:" | awk '{print $3}')
 failed=$(echo "$result" | grep "^Tests failed:" | awk '{print $3}')

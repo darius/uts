@@ -1691,17 +1691,17 @@
   (define (%load-fasl file-or-port)
     (let ((port (if (input-port? file-or-port)
 		    file-or-port
-		    (open-input-file file-or-port))))
+		    (open-input-file file-or-port))))   ; TODO oops prone to forget to close 
       (%read-fasl-header port)
       (let loop ()
 	(if (eof-object? (peek-char port))
-	    #t
+	    unspecified
 	    (begin
 	      ((@make-closure '#() (%read-fasl port)))
 	      (loop))))))
 
 
-  ; Read-eval-print loop.
+  ;; Read-eval-print loop.
 
   (define %reset                ; (this definition will be reassigned)
     (lambda (val)
@@ -1709,26 +1709,38 @@
       (newline (current-output-port))
       (%exit 1)))
 
-  (define %error-cont '*)
+  (define %arguments-to-scheme '())
 
-  (define (@driver-loop)                    ; the system's entry point
-    (if (and (<= 3 (length %command-line-args))
-	     (string=? (cadr %command-line-args) "-f"))
-	(load (caddr %command-line-args))
-	(begin
-          ;; In editing the following, stay conscious of what will appear
-          ;; in backtraces on error. We want only one repl frame there.
-	  (call-with-current-continuation (lambda (k) (set! %reset k)))
-          (let repl ()
-	    (display "-> ")
-	    (let ((exp (read)))
-              (if (eof-object? exp)
-                  (newline)
-		  (let ((obj (%eval exp)))
-                    (cond ((not (eq? obj unspecified))
-	                   (write obj)
-	                   (newline)))
-	            (repl))))))))
+  (define (@start-scheming)  ; called by utsvm once this fasl file is loaded
+    (set! %arguments-to-scheme (cddr %command-line-arguments)) ; skip past the fasl file
+    (cond ((pair? %arguments-to-scheme)
+           (set! %reset (lambda (_) (%exit 1)))
+	   (load (car %arguments-to-scheme)))
+          (else
+	   (call-with-current-continuation (lambda (k) (set! %reset k)))
+           (%scheming))))
+
+  (define (%scheming)  ; read-eval-print loop
+    ;; In editing the following, stay conscious of what will appear
+    ;; in backtraces on error. We want only one repl frame there.
+    (display "-> ")
+    (let ((exp (read)))
+      (if (eof-object? exp)
+          (newline)
+	  (let ((obj (%eval exp)))
+            (cond ((not (eq? obj unspecified))
+	           (write obj)
+	           (newline)))
+	    (%scheming)))))
+
+  (define (%error message . irritants)
+    (call-with-current-continuation 
+      (lambda (cont)
+	(set! %error-cont cont)
+	(@complain "Error" message irritants)
+	(%reset '*))))
+
+  (define %error-cont '*)
 
   (define (@complain error-type message irritants)
     (newline) 
@@ -1739,13 +1751,6 @@
     (for-each (lambda (i) (newline) (write i))
 	      irritants)
     (newline))
-
-  (define (%error message . irritants)
-    (call-with-current-continuation 
-      (lambda (cont)
-	(set! %error-cont cont)
-	(@complain "Error" message irritants)
-	(%reset '*))))
 
   (define (%proceed value)
     (if (procedure? %error-cont)
@@ -2143,7 +2148,7 @@
 	   (again))
 
 	  ((q quit)
-	   'ok)
+           unspecified)
 
 	  ((u up)
 	   (let ((caller (frame->caller frame)))

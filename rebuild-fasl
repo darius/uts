@@ -1,3 +1,3 @@
 cp uts.fasl uts.fasl.backup
 echo '(load "write-fasl.scm") (build-system "uts.scm" "uts.fasl")' | ./uts &&
-./uts -f test/test.scm
+./uts test/test.scm
