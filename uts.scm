@@ -722,6 +722,8 @@
 	    (cond ((null? vars)
 		   (nesting (+ depth 1) (cdr s)))
 		  ((eq? (car vars) v)
+                   (if (< 255 depth) (%error "Code too complex: nesting too deep"))
+                   (if (< 255 index) (%error "Code too complex: too many locals"))
 		   (make-lexical-address depth index))
 		  (else
 		   (searching (cdr vars) (+ index 1))))))))
@@ -750,6 +752,7 @@
 	   => cdr)
 	  (else
 	   (let ((c (car constants)))
+             (if (<= 255 c) (%error "Code too complex: too many constants"))
 	     (set-car! constants (+ c 1))
 	     (set-cdr! constants (cons (cons datum c) (cdr constants)))
 	     c))))
