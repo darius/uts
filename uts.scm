@@ -1196,10 +1196,14 @@
 		   k))
 
 		 ((define)
-		  (assert #f))       ; (define ...) is never a valid expression
+		  (assert #f)) ; (define ...) is never a valid expression
 
 		 ((@label)
 		  (assert (= num-rands 2))
+                  ;; (@label NAME EXP) in a context labeled FOO
+                  ;;  parses EXP in a context labeled (NAME . FOO).
+                  ;;  This labels any closures created in EXP, for display
+                  ;;  by put_object in utsvm.c, case a_closure.
 		  (parse-exp constants
 			     (cons (car rands) label)
 			     (cadr rands)

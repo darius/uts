@@ -1587,6 +1587,11 @@ put_object (FILE *file, Object obj, Flag displaying)
 	      name = vector_ref (code, 3);
 	    put_string ("#<procedure", file);
 	    put_char (' ', file);
+            for (; is_pair (name); name = cdr (name))
+              { /* display a nested procedure name like #<procedure inner,outer> */
+                put_object (file, car (name), false);
+                put_char (',', file);
+              }
 	    put_object (file, name, false);
 	    put_char ('>', file);
 	    break;
