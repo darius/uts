@@ -2012,7 +2012,7 @@
   ;;; The env is a linked list of env frames, where each frame is
   ;;; represented by a vector with the link in slot 0.
   ;;; The code object holds "actual code" for the vm interpreter, plus
-  ;;; 'owner' (human-readable full name) for the debugger.
+  ;;; a label (human-readable full name) for the debugger.
 
   (define (environment? x)
     (vector? x))
@@ -2036,7 +2036,7 @@
 
   (define code->constants (vector-ref-at 1))
   (define code->bytecodes (vector-ref-at 2))
-  (define code->owner     (vector-ref-at 3))
+  (define code->label     (vector-ref-at 3))
   (define code->profile   (vector-ref-at 4))
 
 
@@ -2201,7 +2201,7 @@
 
 	  ((b backtrace)
 	   (print-each (map (lambda (frame)
-			      (code->owner (frame->code frame)))
+			      (code->label (frame->code frame)))
 			    (caller* frame)))
 	   (again))
 

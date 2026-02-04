@@ -59,7 +59,7 @@
        (recur (car obj))
        (write-char (tag obj) port))
       ((code? obj)
-       (recur (code->owner obj))
+       (recur (code->label obj))
        (recur (code->bytecodes obj))
        (recur (code->constants obj))
        (write-char (tag obj) port))

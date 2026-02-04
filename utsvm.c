@@ -850,7 +850,7 @@ string_to_symbol (Object str)
 }
 
 static Object
-make_code_vector (Object data, Object bytecodes, Object owner)
+make_code_vector (Object data, Object bytecodes, Object label)
 {
   assert (is_vector (data));
   assert (is_string (bytecodes));
@@ -860,7 +860,7 @@ make_code_vector (Object data, Object bytecodes, Object owner)
     cv [0] = code_vector_symbol;
     cv [1] = data;
     cv [2] = bytecodes;
-    cv [3] = owner;
+    cv [3] = label;
     cv [4] = make_fixnum (0);
     return codevec;
   }
