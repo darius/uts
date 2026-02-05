@@ -889,17 +889,6 @@
     (cons @%prim-3
 	  (cons prim lap)))
 
-  (define (do-prim pe rands k prim)
-    (@reduce pe 
-	     ((case (length rands)
-		((0) lap/prim-0)
-		((1) lap/prim-1)
-		((2) lap/prim-2)
-		((3) lap/prim-3))
-	      prim
-	      k)
-	     rands))
-
   (define (lap/lit datum constants lap)
     (cons @%lit
 	  (cons (constants/lookup datum constants) 
@@ -934,6 +923,10 @@
 	 (string-append "#!g_" (number->string counter))))))
 
   (define *open-code-primitives?* #t)
+
+  ;; List of global functions to spare from tail call optimization, so the 
+  ;; caller's frame stays visible on the stack. User-settable.
+  (define %dont-tail-on-me '(error %error))
 
 
   ;; (PARSE-FORM form) returns a compiled code vector for a top-level form.
@@ -1215,39 +1208,57 @@
 
 		 ((@primitive)
 		  (assert (and (<= 1 num-rands) (<= num-rands 4)))
-		  (do-prim pe (cdr rands) k 
-			   (cadr (assq (car rands)
-				       (case (length (cdr rands))
-					 ((0) prim-0-list)
-					 ((1) prim-1-list)
-					 ((2) prim-2-list)
-					 ((3) prim-3-list)
-					 (else '()))))))
-
-		 (else         ; application
-		  (cond
+                  (let* ((nr (- num-rands 1))
+                         (prim (prim-lookup (car rands) nr)))
+                    (parse-prim-app pe prim (cdr rands) nr k)))
+                 
+                 (else
+                   (cond
+                    ;; application, maybe needing special handling
 		    ((and (symbol? rator)
-			  (symbol? (lexical-env/lookup s rator))
-			  *open-code-primitives?*
-			  (assq rator 
-				(case num-rands
-				  ((0) prim-0-list)
-				  ((1) prim-1-list)
-				  ((2) prim-2-list)
-				  ((3) prim-3-list)
-				  (else '()))))
-		     => (lambda (pair)
-			  (do-prim pe rands k (cadr pair))))
+		          (symbol? (lexical-env/lookup s rator)))
+                     (cond ((and *open-code-primitives?*
+		                 (prim-lookup rator num-rands))
+		            => (lambda (prim)
+		                 (parse-prim-app pe prim rands num-rands k)))
+                           (else
+                             (parse-call pe (not (memq rator %dont-tail-on-me)) rator rands k))))
 		    (else
-		     (let ((lin (lambda (k2)
-				  (@reduce pe 
-					   (pe rator 
-					       (lap/invoke k2))
-					   rands))))
-		       (if (eq? k lap/restore)
-			   (lin '())
-			   (lap/save (lap/position k)
-				     (lin k)))))))))))))
+                      (parse-call pe #t rator rands k))))))))))
+
+
+      ;; Calls and primitive applications
+
+      (define (parse-call pe tail-ok? rator rands k)
+	(let ((lin (lambda (k2)
+		     (@reduce pe 
+			      (pe rator 
+				  (lap/invoke k2))
+			      rands))))
+	  (if (and tail-ok? (eq? k lap/restore))
+	      (lin '())
+	      (lap/save (lap/position k)
+			(lin k)))))
+
+      (define (parse-prim-app pe prim rands num-rands k)
+        (let ((primop-k ((case num-rands
+		           ((0) lap/prim-0)
+		           ((1) lap/prim-1)
+		           ((2) lap/prim-2)
+		           ((3) lap/prim-3))
+	                 prim
+	                 k)))
+          (@reduce pe primop-k rands)))
+
+      (define (prim-lookup sym num-rands)
+        (cond ((assq sym (case num-rands
+			   ((0) prim-0-list)
+			   ((1) prim-1-list)
+			   ((2) prim-2-list)
+			   ((3) prim-3-list)
+			   (else '())))
+               => cadr)
+              (else #f)))
 
 
       ;;

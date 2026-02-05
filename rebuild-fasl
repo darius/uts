@@ -1,3 +1,12 @@
-cp uts.fasl uts.fasl.backup
-echo '(load "write-fasl.scm") (build-system "uts.scm" "uts.fasl")' | ./uts &&
-./uts test/test.scm
+echo '(load "write-fasl.scm") (build-system "uts.scm" "uts.new.fasl")' | ./uts &&
+
+./utsvm uts.new.fasl test/test.scm &&
+
+if cmp uts.fasl uts.new.fasl
+then
+  echo uts.fasl unchanged.
+else
+  mv uts.fasl uts.old.fasl
+  mv uts.new.fasl uts.fasl
+  echo New uts.fasl built.
+fi
