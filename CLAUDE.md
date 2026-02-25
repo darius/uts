@@ -39,15 +39,11 @@ make install
 
 # Run a Scheme file
 ./uts -f program.scm arg1 arg2
-
-# Rebuild uts.fasl (needed by ./uts) from sources (from within REPL)
-(load "write-fasl.scm")
-(build-system "uts.scm" "uts.fasl")
 ```
 
 ## Bootstrap / Rebuilding uts.fasl
 
-The compiled `uts.fasl` is needed to compile itself - it's a bootstrap dependency. When making changes that affect both `utsvm.c` and `uts.scm`:
+UTS is partly in Scheme; this part, `uts.scm`, must be compiled into `uts.fasl` which is loaded at startup. It is needed to compile itself - it's a bootstrap dependency. When making changes that affect both `utsvm.c` and `uts.scm`:
 
 1. **Simple changes**: Just rebuild fasl with ./rebuild-fasl
 
@@ -57,7 +53,7 @@ The compiled `uts.fasl` is needed to compile itself - it's a bootstrap dependenc
    - Then switch C to new names and rebuild C
    - Rebuild fasl again with new prim-lists: follow the same process as rebuild-fasl does, but load uts.scm first to get updated prim-lists
 
-3. **If fasl becomes broken**: Restore from uts.fasl.backup or from git with `git checkout HEAD -- uts.fasl`
+3. **If fasl becomes broken**: Restore from git with `git checkout HEAD -- uts.fasl`, or maybe make a backup file before attempting an iffy change
 
 ## Architecture
 
@@ -98,7 +94,7 @@ The `parse-form` function compiles Scheme to bytecode. Key sections:
 
 ### FASL Format
 
-Binary format for compiled code with magic number `0xFADDF00D`. Version 4.0. Integers use 7-bit varint encoding with zigzag for signed values. Supports: symbols, pairs, integers, floats, booleans, strings, chars, vectors, code objects, closures.
+Binary format for compiled code with magic number `0xFADDF00D`. Integers use 7-bit varint encoding with zigzag for signed values. Supports: symbols, pairs, integers, floats, booleans, strings, chars, vectors, code objects, closures.
 
 ## Key Global Variables (Scheme)
 
@@ -112,15 +108,15 @@ Binary format for compiled code with magic number `0xFADDF00D`. Version 4.0. Int
 From the REPL after an error:
 ```scheme
 (debug)      ; Enter debugger
-(@proceed v) ; Continue with value v
+(%proceed v) ; Continue with value v
 (dis proc)   ; Disassemble a procedure
 ```
 
-Debugger commands: `?` help, `u` up, `d` down, `e` env, `n` next frame, `a` assembly, `s` stack, `b` backtrace, `q` quit.
+Debugger commands: `?` help, `u` up to caller, `d` down to callee, `e` env, `n` next env frame, `a` assembly, `s` stack, `b` backtrace, `q` quit.
 
 ## Implementation Notes
 
-- Global definitions starting with `@` are internal (e.g., `@EVAL`, `@error`)
+- Global names starting with `@` are internal
 - Redefining standard procedures like `map` can break the compiler
 - Numeric tower: fixnums (62-bit) and IEEE doubles only
 - Macros (R4RS macro appendix) are not implemented
@@ -129,7 +125,7 @@ Debugger commands: `?` help, `u` up, `d` down, `e` env, `n` next frame, `a` asse
 ## Testing and Benchmarking
 
 ```bash
-# Run test suite (47 tests)
+# Run R4RS test suite
 ./run-tests
 
 # Run corpus tests (real Scheme programs)
@@ -150,7 +146,7 @@ Debugger commands: `?` help, `u` up, `d` down, `e` env, `n` next frame, `a` asse
 
 Benchmark results are stored in `bench-results/` with commit-stamped filenames. The baseline commit is tracked in `bench-results/baseline`.
 
-**Benchmarking methodology:** Always rebuild with `make` (release mode) before benchmarking. Run multiple iterations and discard the first (cold cache). Be skeptical of large speedups from small changes - verify by A/B testing both versions in the same session. System load, thermal throttling, and background processes can easily cause 20%+ variance.
+**Benchmarking methodology:** Always rebuild with `make` (release mode) before benchmarking. Run multiple iterations and discard the first (cold cache). Be skeptical of large speedups from small changes - verify by A/B testing both versions in the same session.
 
 **Corpus tests:** The `corpus/` directory contains real Scheme programs that exercise the interpreter more thoroughly than unit tests:
 - **scheme-data-structures**: Queue, pairing heap, trie, sets, string matching

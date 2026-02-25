@@ -731,7 +731,22 @@
   (define lexical-env/empty '())
 
   (define (lexical-env/extend s vals)
-    (cons vals s)))
+    (cons vals s))
+
+  ;; Get the name behind a lexical address.
+  ;; If the address is not mapped, return '<?>
+  ;; -- that's not expected to come up, but I want this
+  ;; to be robust to stripping debug info.
+  (define (locals-map-ref locals-map depth offset)
+    (list-ref/default (list-ref/default locals-map depth '())
+                      offset
+                      '<?>))
+
+  (define (list-ref/default ls n default)
+    (let loop ((ls ls) (n n))
+      (cond ((null? ls) default)
+            ((= n 0) (car ls))
+            (else (loop (cdr ls) (- n 1)))))))
 
 
 ;;;;
@@ -819,9 +834,8 @@
        drop
        halt))
 
-  (define @instruc-sizes '#(2 3 3 2 2 2 3 3 2 2 2 1 1 3 1 1 1 2 2 2 2 1 1))
   (define @instruc-args 
-    '#((d) (b b) (b b) (d) (d) (d) (w) (w) (d) (b) (b) () () (w) () () () (b) (b) (b) (b) () ()))
+    '#((d) (v) (v) (d) (d) (d) (w) (w) (d) (locals) (locals) () () (w) () () () (b) (b) (b) (b) () ()))
 
   (define lap/position length)
   (define lap/append append)
@@ -994,20 +1008,21 @@
 					      (if (pair? f)
 						  (cons (car f) (sans-dot (cdr f)))
 						  (list f))))))
-		    (let ((var-count (length fixed-formals))
-			  (body-constants (constants/new)))
-		      (let ((lap
-			     (parse-exp body-constants
-					label 
-					(expand-lambda-body (cdr rands))
-					(lexical-env/extend s fixed-formals)
-					lap/restore)))
+		    (let ((body-constants (constants/new))
+                          (var-count (length fixed-formals))
+                          (nest-s (lexical-env/extend s fixed-formals)))
+		      (let ((lap (parse-exp body-constants
+					    label 
+					    (expand-lambda-body (cdr rands))
+					    nest-s
+					    lap/restore)))
 			(lap/proc
 			 (codify (if rest-args?
 				     (lap/extend-&rest-env (- var-count 1) lap)
 				     (lap/extend-normal-env var-count lap))
 				 (constants->vector body-constants)
-				 label)
+				 label
+                                 nest-s)
 			 constants
 			 k)))))
 
@@ -1452,16 +1467,17 @@
 		  (lambda () 
 		    (parse-exp constants '() form lexical-env/empty 
 			       lap/restore)))))
-	    (codify lap (constants->vector constants) #f))))))
+	    (codify lap (constants->vector constants) #f lexical-env/empty))))))
 
 
-  (define (@make-code-vector constants-vec bytes label)
-    (vector 'code-vector constants-vec bytes label 0))
+  (define (@make-code-vector constants-vec bytes label locals-map)
+    (vector 'code-vector constants-vec bytes label locals-map 0))
 
-  (define (codify lap constants-vec label)
+  (define (codify lap constants-vec label locals-map)
     (@make-code-vector constants-vec
 		       (list->string (map integer->char lap))
-		       label))
+		       label
+                       locals-map))
 
   (define (%eval form)
     ;; Compile to a top-level procedure with no params, and call it.
@@ -1596,128 +1612,22 @@
       append write display)))
 
 
-
-;;;;
-;;;; builder.scm
-;;;;
-
-(begin
-
-  ;;;
-  ;;; Generate code defining fixed-arity primitives.
-  ;;;
-
-  (define (variable-arity? prim-name)
-    (memq prim-name variable-arity-prim-list))
-
-  (define (prim-def-source-code prim-names args)
-    `(begin
-       ,@(@reduce (lambda (prim-name defs)
-		    (if (variable-arity? prim-name)
-			defs
-			(cons `(define ,prim-name
-				 (lambda ,args
-				   (,prim-name ,@args)))
-			      defs)))
-		  '()
-		  prim-names)))
-
-  (define closure-for-apply
-    (@make-closure '#()
-		   (codify (cons @%apply '())
-			   '#()
-			   'apply)))
-
-  (define closure-for-call/cc
-    (@make-closure '#()
-		    (codify (lap/extend-normal-env 1
-			      (cons @%get-cc
-				(lap/varref (make-lexical-address 0 0)
-				  (lap/invoke '()))))
-			    '#()
-			    'call-with-current-continuation)))
-
-  (define (all-primitive-defs)
-    `(begin
-       ,(prim-def-source-code (map car prim-0-list) '())
-       ,(prim-def-source-code (map car prim-1-list) '(x))
-       ,(prim-def-source-code (map car prim-2-list) '(x y))
-       ,(prim-def-source-code (map car prim-3-list) '(x y z))
-       (define apply ',closure-for-apply)
-       (define call-with-current-continuation ',closure-for-call/cc)))
-
-  (define (write-fasl-startup-prelude out-port)
-    (%write-fasl (parse-form (all-primitive-defs)) out-port))
-
-  ;;;
-  ;;; Compile a file
-  ;;;
-
-  (define (compile-file infile outfile)
-    (call-with-input-file infile
-      (lambda (in)
-	(call-with-output-file outfile
-	  (lambda (out)
-	    (%write-fasl-header out)
-	    (compile-from-port in out))))))
-
-  (define (compile-from-port in out)
-    (let loop ()
-      (let ((o (read in)))
-	(cond ((not (eof-object? o))
-	       (%write-fasl (parse-form o) out)
-	       (loop))))))
-
-
-  ;;;
-  ;;; Building the system
-  ;;;
-  ;;; You need to load write-fasl.scm first to actually run this.
-  ;;; (Same for compile-file.)
-  ;;;
-
-  (define build-system
-    (lambda (infile fasl-name)
-      (call-with-output-file fasl-name
-	(lambda (out)
-	  (%write-fasl-header out)
-	  (write-fasl-startup-prelude out)
-	  (call-with-input-file infile
-	    (lambda (in)
-	      (compile-from-port in out))))))))
-
-
 ;;;;
 ;;;; repl.scm
 ;;;;
 
 (begin
 
-  ; Loading
+  ;; Loading
 
   (define (load file)
     (call-with-input-file file
       (lambda (port)
-	(if (eqv? (peek-char port) (integer->char #xFA)) ; fasl magic number, first byte
-	    (%load-fasl port)
-	    (let loop ()
-	      (let ((exp (read port)))
-		(cond ((not (eof-object? exp))
-		       (%eval exp)
-		       (loop)))))))))
-
-  (define (%load-fasl file-or-port)
-    (let ((port (if (input-port? file-or-port)
-		    file-or-port
-		    (open-input-file file-or-port))))   ; TODO oops prone to forget to close 
-      (%read-fasl-header port)
-      (let loop ()
-	(if (eof-object? (peek-char port))
-	    unspecified
-	    (begin
-	      ((@make-closure '#() (%read-fasl port)))
-	      (loop))))))
-
+	(let loop ()
+	  (let ((exp (read port)))
+	    (cond ((not (eof-object? exp))
+		   (%eval exp)
+		   (loop))))))))
 
   ;; Read-eval-print loop.
 
@@ -1828,10 +1738,13 @@
 
 		  (case (car i)
 		    ((proc)
-		     (newline) 
-		     (dump-asm (disassemble-instrucs (cadr i))
-			       (+ margin 5)
-			       -1))
+                     (let ((code (cadr i)))
+                       (write-char #\space)
+                       (write (code->label code))
+		       (newline)
+		       (dump-asm (disassemble-instrucs code)
+			         (+ margin 5)
+			         -1)))
 		    ((prim-0) (write-prim 0 (cadr i)))
 		    ((prim-1) (write-prim 1 (cadr i)))
 		    ((prim-2) (write-prim 2 (cadr i)))
@@ -1856,34 +1769,36 @@
 					 (cons (list i dis)
 					       acc))))))))
 
+  ;; Return (k width parts)
+  ;;   where width is the #bytes encoding this instruction + its args
+  ;;   and parts is the instruction name and arguments as parsed from the encoding.
   (define (disassemble-instruc pc code k)
-    (let* ((constants (code->constants code))
-	   (byte-ref 
-	    (lambda (offset) 
-	      (char->integer
-	       (string-ref (code->bytecodes code) (+ pc offset)))))
-	   (instruc (byte-ref 0)))
-
-      (define (loop i specs acc cont)
-	(if (null? specs)
-	    (cont i acc)
-	    (let ((take (lambda (width operand)
-			  (loop (+ i width) 
-				(cdr specs)
-				(cons operand acc)
-				cont))))
-		(case (car specs)
-		  ((d) (take 1 (vector-ref constants (byte-ref i))))
-		  ((w) (take 2 (+ (+ pc 3)
-				  (+ (* 256 (byte-ref i)) (byte-ref (+ i 1))))))
-		  ((b) (take 1 (byte-ref i)))
-		  (else (%error "BUG: bad instruc arg" arg))))))
-
-      (loop 1 (vector-ref @instruc-args instruc) '()
-	    (lambda (width args)
-	      (k width 
-		 (cons (vector-ref instruc-names instruc) 
-		       (reverse args))))))))
+    (define (byte-ref offset) 
+      (char->integer (string-ref (code->bytecodes code) (+ pc offset))))
+    (define (take nbytes . args)
+      (let ((iname (vector-ref instruc-names (byte-ref 0))))
+        (k (+ nbytes 1) (cons iname args))))
+    (let ((specs (vector-ref @instruc-args (byte-ref 0))))
+      (cond ((null? specs) (take 0))
+            ((not (null? (cdr specs)))
+             (%error "Bad instruc specs" specs))
+            (else
+              (case (car specs)
+	        ((d) (take 1 (vector-ref (code->constants code) (byte-ref 1))))
+	        ((w) (take 2 (+ (+ pc 3)
+			        (+ (* 256 (byte-ref 1)) (byte-ref 2)))))
+	        ((b) (take 1 (byte-ref 1)))
+                ((locals) (let ((n-locals (byte-ref 1))
+                                (lmap (code->locals-map code)))
+                            (take 1 (if (pair? lmap) ; (let's be robust to stripping debug info)
+                                        (car lmap)
+                                        n-locals))))
+                ((v) (let ((depth (byte-ref 1))
+                           (offset (byte-ref 2)))
+                       (take 2
+                             (locals-map-ref (code->locals-map code) depth offset)
+                             `(at ,depth ,offset))))
+	        (else (%error "BUG: bad instruc arg" spec))))))))
 
 
 ;;;;
@@ -2023,7 +1938,7 @@
   ;;; The env is a linked list of env frames, where each frame is
   ;;; represented by a vector with the link in slot 0.
   ;;; The code object holds "actual code" for the vm interpreter, plus
-  ;;; a label (human-readable full name) for the debugger.
+  ;;; for the debugger a label (human-readable full name) and locals-map.
 
   (define (environment? x)
     (vector? x))
@@ -2039,7 +1954,7 @@
 
   (define (code? x)
     (and (vector? x)
-	 (= (vector-length x) 5)
+	 (= (vector-length x) 6)
 	 (eq? (vector-ref x 0) 'code-vector)))
 
   (define (vector-ref-at i)
@@ -2048,7 +1963,8 @@
   (define code->constants (vector-ref-at 1))
   (define code->bytecodes (vector-ref-at 2))
   (define code->label     (vector-ref-at 3))
-  (define code->profile   (vector-ref-at 4))
+  (define code->locals-map (vector-ref-at 4))
+  (define code->profile   (vector-ref-at 5))
 
 
   ;;; Continuations
@@ -2138,26 +2054,40 @@
 	(for-each (lambda (x) (cycle-write x) (newline))
 		  ls))
 
-      (define (show-env env)
+      ;; lmap is a locals-map, env is a corresponding runtime env
+      ;; As usual we're robust to a stripped locals-map.
+      (define (show-env lmap env)
 	(if (not (env-empty? env))
-	    (print-each (env->inner-frame env))))
+            (let ((vars (if (pair? lmap) (car lmap) '()))
+                  (vals (env->inner-frame env)))
+              (if (= (length vars) (length vals))
+                  (for-each (lambda (var val)
+                              (write var) (display ": ") (cycle-write val) (newline))
+                            vars
+                            vals)
+	          (print-each vals)))))
 
       (define (help)
 	(say "? HELP      - this message")
 	(say "Q QUIT      - quit the debugger")
 	(say "U UP        - up to caller")
 	(say "D DOWN      - down to callee")
-	(say "E ENV       - show the 0th frame of the current environment")
+	(say "E ENV       - show the inner frame of the current environment")
 	(say "N NEXT      - show the next frame of the current environment")
 	(say "A ASSEMBLY  - show assembly source of the current procedure")
 	(say "S STACK     - show the local value stack")
 	(say "B BACKTRACE - names of the current procedure and its callers")
 	(say ""))
 
-      (define (interact frame env callees)
+        (define (go-to-frame frame callees)
+          (interact frame callees
+                    (code->locals-map (frame->code frame))
+		    (frame->lex-env frame)))
+
+      (define (interact frame callees lmap env)
 
 	(define (again)
-	  (interact frame env callees))
+	  (interact frame callees lmap env))
 
 	(case (prompt-and-read "debug> ")
 
@@ -2171,9 +2101,7 @@
 	  ((u up)
 	   (let ((caller (frame->caller frame)))
 	     (cond (caller 
-		    (interact caller 
-			      (frame->lex-env caller) 
-			      (cons frame callees)))
+		    (go-to-frame caller (cons frame callees)))
 		   (else
 		    (say "At top.")
 		    (again)))))
@@ -2183,24 +2111,24 @@
 		  (say "At bottom.")
 		  (again))
 		 (else
-		  (interact (car callees) 
-			    (frame->lex-env (car callees))
-			    (cdr callees)))))
+		  (go-to-frame (car callees) (cdr callees)))))
 
 	  ((e env)
-	   (show-env (frame->lex-env frame))
-	   (interact frame (frame->lex-env frame) callees))
+	   (show-env (code->locals-map (frame->code frame)) ;TODO ugh code dup
+                     (frame->lex-env frame))
+	   (go-to-frame frame callees))
 
 	  ((n next)
 	   (let ((next (if (env-empty? env)
 			   env
-			   (env->enclosing env))))
+			   (env->enclosing env)))
+                 (next-lmap (if (null? lmap) '() (cdr lmap))))
 	     (cond ((env-empty? next)
 		    (say "No more environment frames.")
 		    (again))
 		   (else
-		    (show-env next)
-		    (interact frame next callees)))))
+		    (show-env next-lmap next)
+		    (interact frame callees next-lmap next)))))
 
 	  ((a assembly)
 	   (disassemble (frame->code frame) (frame->pc frame))
@@ -2220,4 +2148,6 @@
 	   (say "Huh?  Enter HELP for help.")
 	   (again))))
 
-      (interact outer-frame (frame->lex-env outer-frame) '()))))
+      (interact outer-frame '()
+                (code->locals-map (frame->code outer-frame))
+                (frame->lex-env outer-frame)))))

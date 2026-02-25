@@ -444,7 +444,6 @@ open_file (Object filename, Tag tag, const char *mode)
 static Object current_input_port, current_output_port;
 static Object halt_code, just_invoke_code, reified_cont_code;
 static Object code_vector_symbol;
-static Object fasl_stack;
 static Object global_lex_env;
 static Object symbol_table;
 
@@ -850,18 +849,19 @@ string_to_symbol (Object str)
 }
 
 static Object
-make_code_vector (Object data, Object bytecodes, Object label)
+make_code_vector (Object data, Object bytecodes, Object label, Object locals_map)
 {
   assert (is_vector (data));
   assert (is_string (bytecodes));
   {
-    Object codevec = allot_vector (5);
+    Object codevec = allot_vector (6);
     Object *cv = vector_ptr (codevec);
     cv [0] = code_vector_symbol;
     cv [1] = data;
     cv [2] = bytecodes;
     cv [3] = label;
-    cv [4] = make_fixnum (0);
+    cv [4] = locals_map;
+    cv [5] = make_fixnum (0);
     return codevec;
   }
 }
@@ -1733,14 +1733,15 @@ stack_error (void)
 static Object 
 read_fasl (FILE *in)
 {
-  int sp = 0;			/* stack pointer */
-  Object o1 = nil, o2 = nil, o3 = nil;
-  Object *stack_base;
+  Object o1 = nil, o2 = nil, o3 = nil, o4 = nil;
 
-  if (!is_vector (fasl_stack))
-    fasl_stack = make_vector (STACK_SIZE, nil);
-  stack_base = vector_ptr (fasl_stack);
-  assert (vector_length (fasl_stack) == STACK_SIZE);
+  Object fasl_stack = make_vector (STACK_SIZE, nil);
+  Object *stack_base = vector_ptr (fasl_stack);
+  int sp = 0;			/* stack pointer */
+
+  enum { max_seen = 5000 };       // TODO make a config param, I guess
+  Object seen_vector = make_vector (max_seen, nil);
+  int nseen = 0;
 
   for (;;) 
     {
@@ -1748,21 +1749,27 @@ read_fasl (FILE *in)
       switch (tag) 
 	{
 	case EOF: 
-	  if (sp == 0) 
-	    {
-	      fasl_stack = nil;
-	      return obj_eof;
-	    }
-	  vm_error ("Premature EOF", nil);
+          if (sp == 1)
+            {
+              POP (o1);
+              return o1;
+            }
+	  vm_error ("Premature EOF or stack size != 1", nil);
 	  break;
-	case 'Z': 
-	  POP (o1);
-	  return o1;
 	case 'P': 
 	  POP (o1);
 	  POP (o2);
-	  PUSH (cons (o1, o2));
+          o3 = cons (o1, o2);
+          if (nseen < max_seen) vector_set (seen_vector, nseen++, o3);
+	  PUSH (o3);
 	  break;
+        case '=':
+          {
+            int i = read_int (in);
+            if (i < 0 || nseen <= i) vm_error ("=ref out of range", make_fixnum (i));
+            PUSH (vector_ref (seen_vector, i));
+            break;
+          }
 	case 'V': 
 	  {
 	    int i, n = read_int (in);
@@ -1777,7 +1784,8 @@ read_fasl (FILE *in)
 	  POP (o1);
 	  POP (o2);
 	  POP (o3);
-	  PUSH (make_code_vector (o1, make_byte_vector (o2), o3));
+	  POP (o4);
+	  PUSH (make_code_vector (o1, make_byte_vector (o2), o3, o4));
 	  break;
 	case 'L':
 	  POP (o1);
@@ -1791,7 +1799,9 @@ read_fasl (FILE *in)
 	    unsigned char *s = string_ptr (str);
 	    for (i = 0; i < n; ++i)
 	      s [i] = tolower (read_unsigned8 (in));
-	    PUSH (string_to_symbol (str));
+	    o3 = string_to_symbol (str);
+	    PUSH (o3);
+            if (nseen < max_seen) vector_set (seen_vector, nseen++, o3);
 	    break;
 	  }
 	case 'U':
@@ -1901,7 +1911,7 @@ prim_read_fasl_header (Object x0)
 {
   check_type (is_input_port (x0), x0);
   check_openness (x0);
-  read_fasl_header (port_file (x0));
+  // XXX this is a no-op now, rm me
   return unspecified;
 }
 
@@ -1910,6 +1920,7 @@ prim_read_fasl (Object x0)
 {
   check_type (is_input_port (x0), x0);
   check_openness (x0);
+  read_fasl_header (port_file (x0));
   return read_fasl (port_file (x0)); 
 }
 
@@ -2002,8 +2013,6 @@ setup (void)
   current_input_port = make_port (an_input_port, stdin);
   current_output_port = make_port (an_output_port, stdout);
 
-  fasl_stack = nil;
-
   global_lex_env = allot_vector (0);
 
   symbol_table = make_vector (101, nil);
@@ -2020,7 +2029,7 @@ setup (void)
     string_ptr (b) [0] = 22;
     halt_code = 
       make_code_vector (global_lex_env, b,
-			string_to_symbol (c_string ("halt_code")));
+			string_to_symbol (c_string ("halt_code")), nil);
   }
 
   {
@@ -2028,7 +2037,7 @@ setup (void)
     string_ptr (b) [0] = 12;
     just_invoke_code = 
       make_code_vector (global_lex_env, b,
-			string_to_symbol (c_string ("just_invoke_code")));
+			string_to_symbol (c_string ("just_invoke_code")), nil);
   }
 
   {
@@ -2037,7 +2046,7 @@ setup (void)
     memcpy (string_ptr (str), t46, sizeof t46);
     reified_cont_code = 
       make_code_vector (global_lex_env, str, 
-			string_to_symbol (c_string ("reified_cont_code")));
+			string_to_symbol (c_string ("reified_cont_code")), nil);
   }    
 }
 
@@ -2320,17 +2329,16 @@ run_fasl (const char *filename)
     fatal_error (strerror (errno));
 
   read_fasl_header (in);
-  for (;;) 
+  Object codes = read_fasl (in);
+  check_type (is_vector (codes), codes);
+
+  for (int i = 0; i < vector_length (codes); ++i) 
     {
-      Object o = read_fasl (in);
-      if (is_eof_object (o))
-	break;
-      check_type (is_vector (o), o);
+      Object o = vector_ref (codes, i);
       interpret (o, global_lex_env);
-      
       /* Reestablish catcher clobbered by interpret() */ /* FIXME */
       if (0 != setjmp (vm_error_catch_point))
-	unexpected_vm_error ();
+        unexpected_vm_error ();
     }
 }
 
@@ -2357,6 +2365,8 @@ main (int argc, char **argv)
   /*  
       This tweak doesn't seem to be worth the space cost (see gc.h):
       GC_free_space_divisor = 2; 
+      Nor this (slower on bench):
+      GC_enable_incremental ();
    */
 
   if (0 != setjmp (vm_error_catch_point))

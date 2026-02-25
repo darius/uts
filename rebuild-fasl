@@ -1,5 +1,8 @@
-echo '(load "write-fasl.scm") (build-system "uts.scm" "uts.new.fasl")' | ./uts &&
 
+# XXX trouble is, this first uts doesn't tell the *shell* there's an error
+echo '(load "build-fasl.scm") (build-system "uts.scm" "uts.new.fasl")' | ./uts &&
+
+echo Compiled new fasl. Trying it... &&
 ./utsvm uts.new.fasl test/test.scm &&
 
 if cmp uts.fasl uts.new.fasl
