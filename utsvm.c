@@ -1583,7 +1583,7 @@ put_object (FILE *file, Object obj, Flag displaying)
 	  {
 	    Object code = closure_code (obj);
 	    Object name = nil;
-	    if (is_vector (code) && vector_length (code) == 5)
+	    if (is_vector (code) && vector_length (code) == 6) // TODO obscure
 	      name = vector_ref (code, 3);
 	    put_string ("#<procedure", file);
 	    put_char (' ', file);
@@ -2026,7 +2026,7 @@ setup (void)
 
   {
     Object b = make_string (1);
-    string_ptr (b) [0] = 12;
+    string_ptr (b) [0] = 12; // the `invoke` instruction
     just_invoke_code = 
       make_code_vector (global_lex_env, b,
 			string_to_symbol (c_string ("just_invoke_code")), nil);
