@@ -739,10 +739,10 @@ put_char (unsigned char c, FILE *out)
 {
 again:
   if (EOF == putc (c, out))
-    if (errno == EINTR)
-      goto again;
-    else
+    {
+      if (errno == EINTR) goto again;
       io_error (errno);
+    }
 }
 
 fast void 
@@ -750,10 +750,10 @@ put_string (const char *s, FILE *out)
 {
 again:
   if (EOF == fputs (s, out))
-    if (errno == EINTR)
-      goto again;
-    else
+    {
+      if (errno == EINTR) goto again;
       io_error (errno);
+    }
 }
 
 /* RECOVERABLE */
@@ -1177,7 +1177,7 @@ scan_real_done:
 	  else
 	    return make_flonum ((double) i);
 	}
-      if (saw_exactness_prefix && is_exact || radix != 10)
+      if ((saw_exactness_prefix && is_exact) || radix != 10)
 	return obj_false;
       /* else fall through */
     }
@@ -1644,14 +1644,6 @@ write_object (FILE *file, Object obj)
   put_object (file, obj, false);
 }
 
-/* This is helpful inside the debugger. */
-static void
-print_object (Object obj)
-{
-  write_object (stdout, obj);
-  put_char ('\n', stdout);
-}
-
 
 /* --- fasl reader --- */
 
@@ -2074,7 +2066,7 @@ typedef struct Interpreter {
   Object stack_vec;
   Object code, lex_env;
   int pc, stack_ptr, frame_ptr;
-} *Interpreter;
+} Interpreter;
 
 
 #define stack_limit	VM_STACK_SIZE
@@ -2143,7 +2135,7 @@ static unsigned stack_depth_count[1024];
 
 /* Pre: CODE is a code_vector that ends with a restore instruction. */
 static Object
-enter_interpreter (Interpreter interp)
+enter_interpreter (Interpreter *interp)
 {
   Object acc = obj_false;
   const char *error_msg = "";
@@ -2240,7 +2232,7 @@ static Object the_stack = nil;
 
 /* This is like save_state (code, lex_env, pc) inside enter_interpreter */
 static void
-push_frame (Interpreter i, Object code, Object lex_env, unsigned pc)
+push_frame (Interpreter *i, Object code, Object lex_env, unsigned pc)
 {
   Object *s = vector_ptr (i->stack_vec) + i->stack_ptr;
   if (stack_limit <= i->stack_ptr + 4)
@@ -2258,7 +2250,7 @@ static Object
 interpret (Object code, Object lex_env)
 {
   /* volatile needed for setjmp */
-  volatile struct Interpreter i;
+  volatile Interpreter i;
 
   if (!is_vector (the_stack))
     the_stack = make_vector (VM_STACK_SIZE, obj_false);
@@ -2270,10 +2262,10 @@ interpret (Object code, Object lex_env)
   i.stack_ptr = 0;
   i.frame_ptr = 0;
 
-  push_frame (&i, halt_code, global_lex_env, 0);
+  push_frame ((Interpreter*)&i, halt_code, global_lex_env, 0);
 
   if (0 == setjmp (vm_error_catch_point)) 
-    return enter_interpreter (&i);
+    return enter_interpreter ((Interpreter*)&i);
 
   /* This is the error handler.  
      Try to push a frame and invoke the ERROR procedure. */
@@ -2285,7 +2277,7 @@ interpret (Object code, Object lex_env)
 
   /* Make sure we have a clean stack frame... */
   if (i.pc < string_length (vector_ref (i.code, 2)))
-    push_frame (&i, i.code, i.lex_env, i.pc);
+    push_frame ((Interpreter*)&i, i.code, i.lex_env, i.pc);
   else
     i.stack_ptr = i.frame_ptr;
   
@@ -2307,7 +2299,7 @@ interpret (Object code, Object lex_env)
     /* And go. */
     i.code = just_invoke_code;
     i.pc = 0;
-    return enter_interpreter (&i);
+    return enter_interpreter ((Interpreter*)&i);
   }
 }
 
@@ -2329,10 +2321,10 @@ run_fasl (const char *filename)
     fatal_error (strerror (errno));
 
   read_fasl_header (in);
-  Object codes = read_fasl (in);
+  volatile Object codes = read_fasl (in);
   check_type (is_vector (codes), codes);
 
-  for (int i = 0; i < vector_length (codes); ++i) 
+  for (volatile int i = 0; i < vector_length (codes); ++i) 
     {
       Object o = vector_ref (codes, i);
       interpret (o, global_lex_env);
