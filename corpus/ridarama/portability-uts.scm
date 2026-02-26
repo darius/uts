@@ -2,10 +2,7 @@
 ;;; Portability defs for UTS
 ;;;
 
-(define panic
-  (lambda x
-    (@error x)))
-
+(define panic %error)
 (define error panic)
 
 (define char->ascii char->integer)

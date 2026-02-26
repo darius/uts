@@ -2,7 +2,6 @@
 
 ;; Replace this with your Scheme system's error procedure.
 (define panic %error)
-;(define panic @error)
 ;(define (panic message . irritants)
 ;  please-supply-a-real-error-procedure  ; causes an unbound-variable error
 ; 'should-not-return)
