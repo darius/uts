@@ -1645,21 +1645,42 @@
            (set! %reset (lambda (_) (%exit 1)))
 	   (load (car %arguments-to-scheme)))
           (else
+           (display "Enter an expression. On an error, enter ,d to debug. For more commands: ,help\n")
 	   (call-with-current-continuation (lambda (k) (set! %reset k)))
            (%scheming))))
 
   (define (%scheming)  ; read-eval-print loop
     ;; In editing the following, stay conscious of what will appear
-    ;; in backtraces on error. We want only one repl frame there.
+    ;; in backtraces on error: we want only one frame from this repl.
     (display "-> ")
-    (let ((exp (read)))
-      (if (eof-object? exp)
+    (let ((cmd (read)))
+      (if (eof-object? cmd)
           (newline)
-	  (let ((obj (%eval exp)))
-            (cond ((not (eq? obj unspecified))
-	           (write obj)
-	           (newline)))
-	    (%scheming)))))
+          (cond ((and (pair? cmd) (eq? (car cmd) 'unquote) (pair? (cdr cmd)) (null? (cddr cmd)))
+                 ;; A comma command
+                 (case (cadr cmd)
+                   ((help)
+                    (display ",help        - this message\n")
+                    (display ",d           - (debug)\n")
+                    (display ",l name      - (load \"name.scm\")\n")
+                    (display ",l \"x.scm\"   - (load \"x.scm\")\n"))
+                   ((d)
+                    (debug))
+                   ((l)
+                    (let ((arg (read)))
+                      (cond ((string? arg) (load arg))
+                            ((symbol? arg) (load (string-append (symbol->string arg) ".scm")))
+                            (else (display "usage: ,l \"string\" or ,l symbol\n")))))
+                   (else
+                     (display "Unknown ,command. Try ,help\n")))
+                 (%scheming))
+                (else
+                  ;; An expression
+	          (let ((obj (%eval cmd)))
+                    (cond ((not (eq? obj unspecified))
+	                   (write obj)
+	                   (newline)))
+	            (%scheming)))))))
 
   (define (%error message . irritants)
     (call-with-current-continuation 
