@@ -195,3 +195,7 @@
 
 (define (length-1 ls)
   (- (length ls) 1))
+
+;; If we're being loaded from the command line with two filename arguments, build the system.
+(if (= (length %arguments-to-scheme) 3)
+    (apply build-system (cdr %arguments-to-scheme)))
