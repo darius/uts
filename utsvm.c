@@ -2272,7 +2272,8 @@ interpret (Object code, Object lex_env)
 
 #ifndef NDEBUG
   printf ("\n[VM Error!] %s\n", vm_error_message);
-  print_object (vm_error_irritant);
+  write_object (stdout, vm_error_irritant);
+  printf ("\n");
 #endif
 
   /* Make sure we have a clean stack frame... */
