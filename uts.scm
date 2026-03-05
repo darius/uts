@@ -1678,9 +1678,17 @@
                   ;; An expression
 	          (let ((obj (%eval cmd)))
                     (cond ((not (eq? obj unspecified))
+                           (set! %%% %%)
+                           (set! %% %)
+                           (set! % obj)
 	                   (write obj)
 	                   (newline)))
 	            (%scheming)))))))
+
+  ;; Output history (with a short memory)
+  (define % unspecified)
+  (define %% unspecified)
+  (define %%% unspecified)
 
   (define (%error message . irritants)
     (call-with-current-continuation 
