@@ -940,7 +940,7 @@
 
   ;; List of global functions to spare from tail call optimization, so the 
   ;; caller's frame stays visible on the stack. User-settable.
-  (define %dont-tail-on-me '(error %error))
+  (define %dont-tail-on-me '(error %error %avast))
 
 
   ;; (PARSE-FORM form) returns a compiled code vector for a top-level form.
@@ -2064,6 +2064,16 @@
 	(inspect-cont %error-cont)
 	(%error "No context to debug")))
 
+  ;; Break into the debugger after printing the args.
+  (define (%avast . args)
+    (display "\n[Breakpoint!] %avast\n")
+    (for-each (lambda (arg) (write arg) (newline))
+              args)
+    (call-with-current-continuation
+     (lambda (cont)
+       (inspect-cont cont)
+       (if (null? args) unspecified (car args)))))
+
   (define (inspect-cont cont)
     (let ((outer-frame 
 	   (let* ((stack (continuation->stack cont))
@@ -2099,16 +2109,15 @@
       (define (help)
 	(say "? HELP      - this message")
 	(say "Q QUIT      - quit the debugger")
-	(say "U UP        - up to caller")
-	(say "D DOWN      - down to callee")
+	(say "B BACKTRACE - names of the current procedure and its callers")
+	(say "A ASSEMBLY  - show assembly source of the current procedure")
 	(say "E ENV       - show the inner frame of the current environment")
 	(say "N NEXT      - show the next frame of the current environment")
-	(say "A ASSEMBLY  - show assembly source of the current procedure")
 	(say "S STACK     - show the local value stack")
-	(say "B BACKTRACE - names of the current procedure and its callers")
-	(say ""))
+	(say "U UP        - up to caller")
+	(say "D DOWN      - down to callee"))
 
-        (define (go-to-frame frame callees)
+      (define (go-to-frame frame callees)
           (interact frame callees
                     (code->locals-map (frame->code frame))
 		    (frame->lex-env frame)))
@@ -2177,6 +2186,7 @@
 	   (say "Huh?  Enter HELP for help.")
 	   (again))))
 
+      (display "Enter ? for help.\n")
       (interact outer-frame '()
                 (code->locals-map (frame->code outer-frame))
                 (frame->lex-env outer-frame)))))
