@@ -1675,7 +1675,9 @@
                     (display ",help        - this message\n")
                     (display ",d           - (debug)\n")
                     (display ",l name      - (load \"name.scm\")\n")
-                    (display ",l \"x.scm\"   - (load \"x.scm\")\n"))
+                    (display ",l \"x.scm\"   - (load \"x.scm\")\n")
+                    (display ",! expr      - evaluate expr for effect, don't print it")
+                    (display ",time expr   - time the evaluation of expr"))
                    ((d)
                     (debug))
                    ((l)
@@ -1683,8 +1685,16 @@
                       (cond ((string? arg) (load arg))
                             ((symbol? arg) (load (string-append (symbol->string arg) ".scm")))
                             (else (display "usage: ,l \"string\" or ,l symbol\n")))))
+                   ((!)
+                    (%eval (read)))
+                   ((time)
+                    (let* ((thunk (%eval `(lambda () ,(read))))
+                           (outcome (%time thunk)))
+                      (display "Seconds: ") (write (car outcome)) (newline)
+                      (display "Value: ")   (write (cadr outcome)) (newline)
+                      ))
                    (else
-                     (display "Unknown ,command. Try ,help\n")))
+                    (display "Unknown ,command. Try ,help\n")))
                  (%scheming))
                 (else
                   ;; An expression
@@ -1696,6 +1706,12 @@
 	                   (write obj)
 	                   (newline)))
 	            (%scheming)))))))
+
+  (define (%time thunk)
+    (let* ((start (%runtime))
+           (result (thunk)))
+      (list (- (%runtime) start)
+	    result)))
 
   ;; Output history (with a short memory)
   (define % unspecified)
