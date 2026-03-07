@@ -1226,7 +1226,19 @@
                   (let* ((nr (- num-rands 1))
                          (prim (prim-lookup (car rands) nr)))
                     (parse-prim-app pe prim (cdr rands) nr k)))
-                 
+
+                 ((%yo) ;; crude printf-debugging convenience
+                  (assert (= num-rands 1))
+                  (pe `(let ((v ,(car rands)))
+                         ;; XXX hygiene
+                         (display "[%yo ")
+                         (write ',(car rands))
+                         (display " : ")
+                         (write v)
+                         (display "]\n")
+                         v)
+                      k))
+
                  (else
                    (cond
                     ;; application, maybe needing special handling
