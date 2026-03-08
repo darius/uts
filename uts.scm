@@ -755,6 +755,28 @@
 
 (begin
 
+  ;;; Macros
+
+  (define %macroexpanders '())
+
+  (define (%get-macroexpander symbol)
+    (cond ((assq symbol %macroexpanders) => cdr)
+          (else #f)))
+
+  (define (%define-macro symbol expander)
+    (set! %macroexpanders
+          (cons (cons symbol expander) %macroexpanders)))
+
+  (define (%macroexpander form)
+    (and (pair? form)
+         (symbol? (car form))
+         (%get-macroexpander (car form))))
+
+  (define (%macroexpand-1 form)
+    (cond ((%macroexpander form) => (lambda (expand) (apply expand (cdr form))))
+          (else form)))
+
+
   ;;;
   ;;; Constants tables
   ;;;
@@ -1209,6 +1231,12 @@
 		 ((define)
 		  (assert #f)) ; (define ...) is never a valid expression
 
+                 ((%defmacro)
+                  (assert (and (<= num-rands 3) (symbol? (car rands))))
+                  (pe `(%define-macro ',(car rands)
+                                      (@label ,(car rands) (lambda ,(cadr rands) ,@(cddr rands))))
+                      k))
+
 		 ((@label)
 		  (assert (= num-rands 2))
                   ;; (@label NAME EXP) in a context labeled FOO
@@ -1227,31 +1255,29 @@
                          (prim (prim-lookup (car rands) nr)))
                     (parse-prim-app pe prim (cdr rands) nr k)))
 
-                 ((%yo) ;; crude printf-debugging convenience
-                  (assert (= num-rands 1))
-                  (pe `(let ((v ,(car rands)))
-                         ;; XXX hygiene
-                         (display "[%yo ")
-                         (write ',(car rands))
-                         (display " : ")
-                         (write v)
-                         (display "]\n")
-                         v)
-                      k))
-
                  (else
                    (cond
-                    ;; application, maybe needing special handling
-		    ((and (symbol? rator)
-		          (symbol? (lexical-env/lookup s rator)))
-                     (cond ((and *open-code-primitives?*
-		                 (prim-lookup rator num-rands))
-		            => (lambda (prim)
-		                 (parse-prim-app pe prim rands num-rands k)))
+                    ((symbol? rator)
+                     (cond ((%get-macroexpander rator)
+                            ;; macro
+                            ;; (N.B. this case deliberately overrides the rator-is-bound case)
+                            => (lambda (expand)
+                                 (pe (apply expand rands) k)))
+		           ((symbol? (lexical-env/lookup s rator))
+                            ;; rator is not locally bound -- application of global variable
+                            (cond ((and *open-code-primitives?*
+		                        (prim-lookup rator num-rands))
+                                   ;; open-coded primitive app
+		                   => (lambda (prim)
+		                        (parse-prim-app pe prim rands num-rands k)))
+                                  (else
+                                   ;; ordinary app, possibly with TCO suppressed
+                                   (parse-call pe (not (memq rator %dont-tail-on-me)) rator rands k))))
                            (else
-                             (parse-call pe (not (memq rator %dont-tail-on-me)) rator rands k))))
+                            ;; ordinary app
+                            (parse-call pe #t rator rands k))))
 		    (else
-                      (parse-call pe #t rator rands k))))))))))
+                     (parse-call pe #t rator rands k))))))))))
 
 
       ;; Calls and primitive applications
@@ -1495,6 +1521,24 @@
     ;; Compile to a top-level procedure with no params, and call it.
     ((@make-closure '#() (parse-form form)))))
 
+
+;;;; Misc macros
+;;;; Of course, these operate in the target system, not in this source file.
+(begin
+
+  (%define-macro '%yo ;; crude printf-debugging convenience
+                 (lambda rands
+                   (if (not (and (pair? rands) (null? (cdr rands))))
+                       (%error "Syntax error" "Requires one operand" `(%yo ,@rands)))
+                   `(let ((v ,(car rands)))
+                      ;; XXX hygiene
+                      (display "[%yo ")
+                      (write ',(car rands))
+                      (display " : ")
+                      (write v)
+                      (display "]\n")
+                      v)))
+  )
 
 ;;;;
 ;;;; globals.scm
