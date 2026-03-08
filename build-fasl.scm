@@ -52,9 +52,9 @@
 
   (define closure-for-call/cc
     (@make-closure '#()
-		    (codify (lap/extend-normal-env 1
+		    (codify (lap/params 1
 			      (cons @%get-cc
-				(lap/varref (make-lexical-address 0 0)
+				(lap/var (make-lexical-address 0 0)
 				  (lap/invoke '()))))
 			    '#()
 			    'call-with-current-continuation

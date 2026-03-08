@@ -803,21 +803,20 @@
 
 
   ;;;
-  ;;; Lap
-  ;;; A misnomer, in that these are raw bytecodes...
+  ;;; Bytecode assembler ("lap", traditional name for Lisp assembler)
   ;;;
 
   (define @%lit 0)
-  (define @%varref 1)
-  (define @%varset 2)
-  (define @%global-ref 3)
-  (define @%global-set 4)
-  (define @%global-define 5)
-  (define @%if-false 6)
+  (define @%var 1)
+  (define @%var! 2)
+  (define @%glo 3)
+  (define @%glo! 4)
+  (define @%define 5)
+  (define @%unless 6)
   (define @%jump 7)
   (define @%proc 8)
-  (define @%extend-normal-env 9)
-  (define @%extend-&rest-env 10)
+  (define @%params 9)
+  (define @%&rest-params 10)
   (define @%restore 11)
   (define @%invoke 12)
   (define @%save 13)
@@ -831,18 +830,19 @@
   (define @%drop 21)
   (define @%halt 22)
 
-  (define instruc-names            ;; Needed by the disassembler.
-    '#(lit
-       varref 
-       varset
-       global-ref
-       global-set
-       global-define
-       if-false
+  ;; Corresponding names shown by the disassembler.
+  (define instruc-names
+    '#(lit    ;; literal constant
+       var    ;; variable (nonglobal)
+       var!   ;; set! var
+       glo    ;; variable (global)
+       glo!   ;; set! glo
+       define ;; define glo
+       unless ;; jump if false
        jump
        proc
-       extend-normal-env
-       extend-&rest-env
+       params
+       &rest-params
        restore
        invoke
        save
@@ -875,28 +875,28 @@
     (cons @%jump
 	  (lap/offset pos lap)))
 
-  (define (lap/if-false pos lap)
-    (cons @%if-false
+  (define (lap/unless pos lap)
+    (cons @%unless
 	  (lap/offset pos lap)))
 
-  (define (lap/varref addr lap)
-    (cons @%varref
+  (define (lap/var addr lap)
+    (cons @%var
 	  (cons (lexical-address/depth addr)
 		(cons (lexical-address/offset addr)
 		      lap))))
 
-  (define (lap/varset addr lap)
-    (cons @%varset
+  (define (lap/var! addr lap)
+    (cons @%var!
 	  (cons (lexical-address/depth addr)
 		(cons (lexical-address/offset addr)
 		      lap))))
 
-  (define (lap/extend-normal-env count lap)
-    (cons @%extend-normal-env
+  (define (lap/params count lap)
+    (cons @%params
 	  (cons count lap)))
 
-  (define (lap/extend-&rest-env count lap)
-    (cons @%extend-&rest-env
+  (define (lap/&rest-params count lap)
+    (cons @%&rest-params
 	  (cons count lap)))
 
   (define (lap/save pos lap)
@@ -930,18 +930,18 @@
 	  (cons (constants/lookup datum constants) 
 		lap)))
 
-  (define (lap/global-ref symbol constants lap)
-    (cons @%global-ref
+  (define (lap/glo symbol constants lap)
+    (cons @%glo
 	  (cons (constants/lookup symbol constants) 
 		lap)))
 
-  (define (lap/global-set symbol constants lap)
-    (cons @%global-set
+  (define (lap/glo! symbol constants lap)
+    (cons @%glo!
 	  (cons (constants/lookup symbol constants) 
 		lap)))
 
-  (define (lap/global-define symbol constants lap)
-    (cons @%global-define
+  (define (lap/define symbol constants lap)
+    (cons @%define
 	  (cons (constants/lookup symbol constants) 
 		lap)))
 
@@ -981,8 +981,8 @@
 	    ((symbol? exp) 
 	     (let ((addr (lexical-env/lookup s exp)))
 	       (if (symbol? addr) 
-		   (lap/global-ref addr constants k)
-		   (lap/varref addr k))))
+		   (lap/glo addr constants k)
+		   (lap/var addr k))))
 
 	    ((not (pair? exp))
 	     (lap/lit exp constants k))
@@ -1010,14 +1010,14 @@
 		    (pe (car rands)
 			(if (eq? k lap/restore)
 			    (let ((e (pe alternative k)))
-			      (lap/if-false (lap/position e)
-					    (lap/append (pe consequent k)
-							e)))
+			      (lap/unless (lap/position e)
+					  (lap/append (pe consequent k)
+						      e)))
 			    (let ((j (lap/position k))
 				  (e (pe alternative k)))
-			      (lap/if-false (lap/position e)
-					    (pe consequent 
-						(lap/jump j e))))))))
+			      (lap/unless (lap/position e)
+					  (pe consequent 
+					      (lap/jump j e))))))))
 
 		 ((lambda)
 		  (assert (and (< 1 num-rands)
@@ -1040,8 +1040,8 @@
 					    lap/restore)))
 			(lap/proc
 			 (codify (if rest-args?
-				     (lap/extend-&rest-env (- var-count 1) lap)
-				     (lap/extend-normal-env var-count lap))
+				     (lap/&rest-params (- var-count 1) lap)
+				     (lap/params var-count lap))
 				 (constants->vector body-constants)
 				 label
                                  nest-s)
@@ -1097,8 +1097,8 @@
 		    (let ((addr (lexical-env/lookup s name)))
 		      (pe exp
 			  (if (symbol? addr) 
-			      (lap/global-set addr constants k)
-			      (lap/varset addr k))))))
+			      (lap/glo! addr constants k)
+			      (lap/var! addr k))))))
 
 		 ((begin)
 		  (if (null? rands)
@@ -1496,11 +1496,11 @@
 				       (car names)
 				       (car exps)
 				       lexical-env/empty
-				       (lap/global-define (car names) 
-							  constants
-							  (if (null? (cdr names))
-							      k
-							      (lap/drop k))))))
+				       (lap/define (car names) 
+						   constants
+						   (if (null? (cdr names))
+						       k
+						       (lap/drop k))))))
 			((null? names) k)))
 		  (lambda () 
 		    (parse-exp constants '() form lexical-env/empty 
