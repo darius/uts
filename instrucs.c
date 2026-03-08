@@ -65,7 +65,7 @@ global_define:			/* d */
     set_top (var);
   }
 
-branch:				/* c c */
+unless:				/* c c */
   {
     if (is_true (pop ()))
       pc += 2;
@@ -88,7 +88,7 @@ proc:				/* d */
     push (make_closure (lex_env, get_datum ()));
   }
 
-extend_normal_env:		/* c */
+params: 			/* c */
   {
     unsigned num_formals = get_byte ();
 
@@ -116,7 +116,7 @@ extend_normal_env:		/* c */
       }
   }
 
-extend_rest_env:		/* c */
+rest_params:			/* c */
   {
     unsigned min_num_args = get_byte ();
     unsigned actuals = stack_ptr - frame_ptr;
