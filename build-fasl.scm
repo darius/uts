@@ -9,6 +9,7 @@
 (begin
 
   ;;; Compile the primitives + the Scheme source to a fasl file.
+  ;; N.B. *open-code-primitives?* must be true for the primitives to compile correctly
   (define (build-system scheme-filename fasl-filename)
     (compile-to-fasl (cons (all-primitive-defs) (read-all scheme-filename))
                      fasl-filename))
@@ -58,7 +59,7 @@
 				  (lap/invoke '()))))
 			    '#()
 			    'call-with-current-continuation
-                            (lexical-env/extend lexical-env/empty '(svec)))))
+                            (lexical-env/extend lexical-env/empty '(callee)))))
 
   (define (all-primitive-defs)
     `(begin
