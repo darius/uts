@@ -2036,9 +2036,14 @@ setup (void)
     unsigned char t46[] = { 9, 1, 1, 1, 0, 16, 1, 0, 0, 11 };
     Object str = make_string (sizeof t46);
     memcpy (string_ptr (str), t46, sizeof t46);
+    Object locals_map =
+      cons (cons (string_to_symbol (c_string ("value")), nil),
+            cons (cons (string_to_symbol (c_string ("stack-vector")), nil),
+                  nil));
     reified_cont_code = 
       make_code_vector (global_lex_env, str, 
-			string_to_symbol (c_string ("reified_cont_code")), nil);
+			string_to_symbol (c_string ("reified_cont_code")),
+                        locals_map);
   }    
 }
 
