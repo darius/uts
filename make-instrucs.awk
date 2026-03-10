@@ -1,3 +1,37 @@
+# Build instruc-cases.c from instrucs.c
+
+# A line with a C stmt label, not preceded by whitespace, is taken to
+# start the code for an instruction or primitive:
+#   p0_foo: primitive with 0 operands, named foo.
+#   p3_bar: ditto with 3 operands
+#   baz (no p<n> prefix): bytecode instruction named baz.
+
+# We replace this label with "case <k>:" where k is autoincremented.
+# The k's are incremented independently for the different cases above
+# (i.e. the bytecode instruction numbering is separated from the
+# primitive numberings, as well as independent numberings for the
+# different operand counts).
+
+# We also auto-insert "break;" between these cases.
+
+# We generate the skeleton of the prim_<k> instructions:
+#   Object x0 = pop ();
+#   ...
+#   switch (get_byte ()) {
+#      ...
+#      <cases such as p1_foo> as described above
+#      ...
+#      default: vm_error ("Bad opcode", nil);
+#   }
+#   push (acc);
+
+# Plus a callout block to implement e.g. { callout1 (integer_to_char); }
+
+# Admittedly this expansion doesn't streamline the code much, and 
+# I guess makes it harder to understand. What I had in mind at the time
+# included more build-time optimization work along the lines of vmgen.
+
+
 BEGIN { cur = "beginit"; }
 
 match($0, /^p[0-3]_[A-Za-z0-9_]*:/) {
