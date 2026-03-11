@@ -2059,14 +2059,16 @@
   ;; As usual we're robust to a stripped locals-map.
   (define (%show-env-outer-frame lmap env)
     (if (not (env-empty? env))
-        (let ((vars (if (pair? lmap) (car lmap) '()))
-              (vals (env->inner-frame env)))
-          (if (= (length vars) (length vals))
-              (for-each (lambda (var val)
-                          (write var) (display ": ") (cycle-write val) (newline))
-                        vars
-                        vals)
-	      (%print-each vals)))))
+        (%show-env-frame (if (pair? lmap) (car lmap) '())
+                         (env->inner-frame env))))
+
+  (define (%show-env-frame vars vals)
+    (if (= (length vars) (length vals))
+        (for-each (lambda (var val)
+                    (write var) (display ": ") (cycle-write val) (newline))
+                  vars
+                  vals)
+	(%print-each vals)))
 
   (define (%print-each ls)
     (for-each (lambda (x) (cycle-write x) (newline))
