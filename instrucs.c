@@ -373,17 +373,17 @@ p1_tan: 		{ acc = float_op1 (tan,  x0); }
 p1_asin: 		{ acc = float_op1 (asin, x0); }
 p1_acos: 		{ acc = float_op1 (acos, x0); }
 p1_atan: 		{ acc = float_op1 (atan, x0); }
-p1_closureTOlex_env:    { vm_check_type (is_closure (x0), x0);
+p1_ATclosureTOlex_env:  { vm_check_type (is_closure (x0), x0);
 			  acc = closure_lex_env (x0); }
-p1_closureTOcode:	{ vm_check_type (is_closure (x0), x0);
+p1_ATclosureTOcode:	{ vm_check_type (is_closure (x0), x0);
 			  acc = closure_code (x0); }
 p1_nullP:    		{ acc = make_boolean (is_null (x0)); }
 p1_not:         	{ acc = make_boolean (!is_true (x0)); }
-p1_char_white_spaceP:   { vm_check_type (is_char (x0), x0);
+p1_char_whitespaceP:    { vm_check_type (is_char (x0), x0);
 			  acc = make_boolean (isspace (char_value (x0))); }
 p1_reverse: 		{ callout1 (list_reverse); }
 p1_length: 		{ callout1 (prim_list_length); }
-p1_skip_blanks: 	{ callout1 (prim_skip_blanks); }
+p1_ATskip_blanks: 	{ callout1 (prim_skip_blanks); }
 p1_flush_input_line:	{ callout1 (prim_flush_input_line); }
 p1_read_fasl_header:	{ callout1 (prim_read_fasl_header); }
 p1_read_fasl:		{ callout1 (prim_read_fasl); }
@@ -468,7 +468,8 @@ p2_vector_ref:	{ vm_check_type (is_vector (x1), x1);
 		    if (vector_length (x1) <= i)
                       vm_range_error (i);
 		    acc = vector_ref (x1, i); } }
-p2_make_closure:{ vm_check_type (is_vector (x1), x1);
+p2_ATmake_closure: {
+                  vm_check_type (is_vector (x1), x1);
 		  vm_check_type (is_vector (x0), x0);
 		  acc = make_closure (x1, x0); }
 p2_expt: 	{ callout2 (expt); }
@@ -484,7 +485,7 @@ p2_charLEP: 	{ vm_check_type (is_char (x1), x1);
 p2_charEQP: 	{ vm_check_type (is_char (x1), x1);
                   vm_check_type (is_char (x0), x0);
 		  acc = make_boolean (char_value (x1) == char_value (x0)); }
-p2_read_atom: 	{ callout2 (prim_read_atom); }
+p2_ATread_atom: { callout2 (prim_read_atom); }
 p2_ATdisplay_string: { goto bad_opcode_label; }
 p2_write_char:  { vm_check_type (is_char (x1), x1);
 		  vm_check_type (is_output_port (x0), x0);
