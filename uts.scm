@@ -5,7 +5,8 @@
 (begin
   (define complex? number?)
   (define real? number?)
-  (define rational? real?))
+  (define rational? real?)
+  (define call/cc call-with-current-continuation))
 
 ;;;
 ;;; car/cdr compositions
@@ -1702,7 +1703,7 @@
 	   (load (car %arguments-to-scheme)))
           (else
            (display "Enter an expression. On an error, enter ,d to debug. For more commands: ,help\n")
-	   (call-with-current-continuation (lambda (k) (set! %reset k)))
+	   (call/cc (lambda (k) (set! %reset k)))
            (%scheming))))
 
   (define (%scheming)  ; read-eval-print loop
@@ -1765,7 +1766,7 @@
   (define %%% unspecified)
 
   (define (%error message . irritants)
-    (call-with-current-continuation 
+    (call/cc
       (lambda (cont)
 	(set! %error-cont cont)
 	(@complain "Error" message irritants)
@@ -2094,7 +2095,7 @@
   ;;; stack saved as a Scheme vector in the closure's lex-env slot.
 
   (define continuation? 
-    (let ((cont-code (call-with-current-continuation @closure->code)))
+    (let ((cont-code (call/cc @closure->code)))
       (lambda (obj)
 	(and (procedure? obj)
 	     (eq? (@closure->code obj) cont-code)))))
@@ -2162,10 +2163,9 @@
     (display "\n[Breakpoint!] %avast\n")
     (for-each (lambda (arg) (write arg) (newline))
               args)
-    (call-with-current-continuation
-     (lambda (cont)
-       (inspect-cont cont)
-       (if (null? args) unspecified (car args)))))
+    (call/cc (lambda (cont)
+               (inspect-cont cont)
+               (if (null? args) unspecified (car args)))))
 
   (define (inspect-cont cont)
 
