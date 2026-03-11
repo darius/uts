@@ -2038,10 +2038,9 @@
 (begin
 
   ;;; The parts of a closure: lexical environment and code object.
+
   ;;; The env is a linked list of env frames, where each frame is
   ;;; represented by a vector with the link in slot 0.
-  ;;; The code object holds "actual code" for the vm interpreter, plus
-  ;;; for the debugger a label (human-readable full name) and locals-map.
 
   (define (environment? x)
     (vector? x))
@@ -2054,6 +2053,26 @@
 
   (define (env->inner-frame env)
     (cdr (vector->list env)))
+
+  ;; lmap is a locals-map, env is a corresponding runtime env.
+  ;; As usual we're robust to a stripped locals-map.
+  (define (%show-env-outer-frame lmap env)
+    (if (not (env-empty? env))
+        (let ((vars (if (pair? lmap) (car lmap) '()))
+              (vals (env->inner-frame env)))
+          (if (= (length vars) (length vals))
+              (for-each (lambda (var val)
+                          (write var) (display ": ") (cycle-write val) (newline))
+                        vars
+                        vals)
+	      (%print-each vals)))))
+
+  (define (%print-each ls)
+    (for-each (lambda (x) (cycle-write x) (newline))
+	      ls))
+
+  ;;; The code object holds "actual code" for the vm interpreter, plus
+  ;;; for the debugger a label (human-readable full name) and locals-map.
 
   (define (code? x)
     (and (vector? x)
@@ -2149,118 +2168,100 @@
        (if (null? args) unspecified (car args)))))
 
   (define (inspect-cont cont)
-    (let ((outer-frame 
-	   (let* ((stack (continuation->stack cont))
-		  (stack-top (vector-length stack)))
-	     (make-frame stack stack-top))))
 
-      (define (prompt-and-read prompt)
-	(display prompt)
-	(let ((obj (read)))
-          (if (eof-object? obj) 'quit obj)))
+    (define (prompt-and-read prompt)
+      (display prompt)
+      (let ((obj (read)))
+        (if (eof-object? obj) 'quit obj)))
 
-      (define (say message)
-	(display message)
-	(newline))
+    (define (say message)
+      (display message)
+      (newline))
 
-      (define (print-each ls)
-	(for-each (lambda (x) (cycle-write x) (newline))
-		  ls))
+    (define (help)
+      (say "? help      - this message")
+      (say "q quit      - quit the debugger")
+      (say "b backtrace - names of the current procedure and its callers")
+      (say "a assembly  - show assembly source of the current procedure")
+      (say "e env       - show the inner frame of the current environment")
+      (say "n next      - show the next frame of the current environment")
+      (say "s stack     - show the local value stack")
+      (say "u up        - up to caller")
+      (say "d down      - down to callee"))
 
-      ;; lmap is a locals-map, env is a corresponding runtime env
-      ;; As usual we're robust to a stripped locals-map.
-      (define (show-env lmap env)
-	(if (not (env-empty? env))
-            (let ((vars (if (pair? lmap) (car lmap) '()))
-                  (vals (env->inner-frame env)))
-              (if (= (length vars) (length vals))
-                  (for-each (lambda (var val)
-                              (write var) (display ": ") (cycle-write val) (newline))
-                            vars
-                            vals)
-	          (print-each vals)))))
+    (define (go-to-frame frame callees)
+      (interact frame callees
+                (code->locals-map (frame->code frame))
+		(frame->lex-env frame)))
 
-      (define (help)
-	(say "? HELP      - this message")
-	(say "Q QUIT      - quit the debugger")
-	(say "B BACKTRACE - names of the current procedure and its callers")
-	(say "A ASSEMBLY  - show assembly source of the current procedure")
-	(say "E ENV       - show the inner frame of the current environment")
-	(say "N NEXT      - show the next frame of the current environment")
-	(say "S STACK     - show the local value stack")
-	(say "U UP        - up to caller")
-	(say "D DOWN      - down to callee"))
+    (define (interact frame callees lmap env)
 
-      (define (go-to-frame frame callees)
-          (interact frame callees
-                    (code->locals-map (frame->code frame))
-		    (frame->lex-env frame)))
+      (define (again)
+	(interact frame callees lmap env))
 
-      (define (interact frame callees lmap env)
+      (case (prompt-and-read "debug> ")
 
-	(define (again)
-	  (interact frame callees lmap env))
+	((? help)
+	 (help)
+	 (again))
 
-	(case (prompt-and-read "debug> ")
+	((q quit)
+         unspecified)
 
-	  ((? help)
-	   (help)
-	   (again))
+	((u up)
+	 (let ((caller (frame->caller frame)))
+	   (cond (caller 
+		  (go-to-frame caller (cons frame callees)))
+		 (else
+		  (say "At top.")
+		  (again)))))
 
-	  ((q quit)
-           unspecified)
+	((d down)
+	 (cond ((null? callees)
+		(say "At bottom.")
+		(again))
+	       (else
+		(go-to-frame (car callees) (cdr callees)))))
 
-	  ((u up)
-	   (let ((caller (frame->caller frame)))
-	     (cond (caller 
-		    (go-to-frame caller (cons frame callees)))
-		   (else
-		    (say "At top.")
-		    (again)))))
+	((e env)
+	 (%show-env-outer-frame (code->locals-map (frame->code frame)) ;TODO ugh code dup
+                                (frame->lex-env frame))
+	 (go-to-frame frame callees))
 
-	  ((d down)
-	   (cond ((null? callees)
-		  (say "At bottom.")
+	((n next)
+	 (let ((next (if (env-empty? env)
+			 env
+			 (env->enclosing env)))
+               (next-lmap (if (null? lmap) '() (cdr lmap))))
+	   (cond ((env-empty? next)
+		  (say "No more environment frames.")
 		  (again))
 		 (else
-		  (go-to-frame (car callees) (cdr callees)))))
+		  (%show-env-outer-frame next-lmap next)
+		  (interact frame callees next-lmap next)))))
 
-	  ((e env)
-	   (show-env (code->locals-map (frame->code frame)) ;TODO ugh code dup
-                     (frame->lex-env frame))
-	   (go-to-frame frame callees))
+	((a assembly)
+	 (disassemble (frame->code frame) (frame->pc frame))
+	 (again))
 
-	  ((n next)
-	   (let ((next (if (env-empty? env)
-			   env
-			   (env->enclosing env)))
-                 (next-lmap (if (null? lmap) '() (cdr lmap))))
-	     (cond ((env-empty? next)
-		    (say "No more environment frames.")
-		    (again))
-		   (else
-		    (show-env next-lmap next)
-		    (interact frame callees next-lmap next)))))
+	((s stack)
+	 (%print-each (frame->stack frame))
+	 (again))
 
-	  ((a assembly)
-	   (disassemble (frame->code frame) (frame->pc frame))
-	   (again))
+	((b backtrace)
+	 (%print-each (map (lambda (frame)
+			     (code->label (frame->code frame)))
+			   (caller* frame)))
+	 (again))
 
-	  ((s stack)
-	   (print-each (frame->stack frame))
-	   (again))
+	(else 
+	 (say "Huh?  Enter HELP for help.")
+	 (again))))
 
-	  ((b backtrace)
-	   (print-each (map (lambda (frame)
-			      (code->label (frame->code frame)))
-			    (caller* frame)))
-	   (again))
-
-	  (else 
-	   (say "Huh?  Enter HELP for help.")
-	   (again))))
-
-      (display "Enter ? for help.\n")
+    (display "Enter ? for help.\n")
+    (let ((outer-frame 
+	   (let ((stack (continuation->stack cont)))
+	     (make-frame stack (vector-length stack)))))
       (interact outer-frame '()
                 (code->locals-map (frame->code outer-frame))
                 (frame->lex-env outer-frame)))))
