@@ -59,7 +59,7 @@
 				  (lap/invoke '()))))
 			    '#()
 			    'call-with-current-continuation
-                            (lexical-env/extend lexical-env/empty '(callee)))))
+                            (lexical-env/extend lexical-env/empty '(receiver)))))
 
   (define (all-primitive-defs)
     `(begin
