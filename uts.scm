@@ -89,7 +89,7 @@
 	     (L (cdr rest) (cdr L)))
 	    ((null? L) n))))
 
-  (define (@extend-transitive-rel rel?)
+  (define (%extend-transitive-rel rel?)
     (lambda (x y . rest)
       (and (rel? x y)
 	   (if (null? rest) ; first test moved out of loop 'cause of dumb compiler
@@ -100,23 +100,23 @@
 			  #t
 			  (loop (car rest) (cdr rest)))))))))
 
-  (define <= (@extend-transitive-rel (lambda (x y) (<= x y))))
-  (define <  (@extend-transitive-rel (lambda (x y) (< x y))))
-  (define =  (@extend-transitive-rel (lambda (x y) (= x y))))
+  (define <= (%extend-transitive-rel (lambda (x y) (<= x y))))
+  (define <  (%extend-transitive-rel (lambda (x y) (< x y))))
+  (define =  (%extend-transitive-rel (lambda (x y) (= x y))))
 
-  (define (@0-or-1 proc default)
+  (define (%0-or-1 proc default)
     (lambda opt:arg
       (proc
        (cond ((null? opt:arg) default)
 	     ((null? (cdr opt:arg)) (car opt:arg))
 	     (else (%error "Expected 0 or 1 args to" proc opt:arg))))))
 
-  (define peek-char (@0-or-1 (lambda (x) (peek-char x)) (current-input-port)))
-  (define read-char (@0-or-1 (lambda (x) (read-char x)) (current-input-port)))
+  (define peek-char (%0-or-1 (lambda (x) (peek-char x)) (current-input-port)))
+  (define read-char (%0-or-1 (lambda (x) (read-char x)) (current-input-port)))
 
   ; FIXME: er, default should be a thunk so that we get the -current- output
   ; port, below; doesn't matter right now because that never changes.
-  (define (@1-or-2 proc default)
+  (define (%1-or-2 proc default)
     (lambda (arg . opt:arg)
       (proc 
        arg
@@ -126,25 +126,25 @@
 			   proc (cons arg opt:arg)))))))
 
   (define make-vector
-    (@1-or-2 (lambda (x y) (make-vector x y)) #f))
+    (%1-or-2 (lambda (x y) (make-vector x y)) #f))
 
   (define make-string 
-    (@1-or-2 (lambda (x y) (make-string x y)) #\space))
+    (%1-or-2 (lambda (x y) (make-string x y)) #\space))
 
   (define number->string
-    (@1-or-2 (lambda (x y) (number->string x y)) 10))
+    (%1-or-2 (lambda (x y) (number->string x y)) 10))
 
   (define string->number
-    (@1-or-2 (lambda (x y) (string->number x y)) 10))
+    (%1-or-2 (lambda (x y) (string->number x y)) 10))
 
   (define write-char
-    (@1-or-2 (lambda (x y) (write-char x y)) (current-output-port)))
+    (%1-or-2 (lambda (x y) (write-char x y)) (current-output-port)))
 
   (define write
-    (@1-or-2 (lambda (x y) (write x y)) (current-output-port)))
+    (%1-or-2 (lambda (x y) (write x y)) (current-output-port)))
 
   (define display
-    (@1-or-2 (lambda (x y) (display x y)) (current-output-port)))
+    (%1-or-2 (lambda (x y) (display x y)) (current-output-port)))
 
   ; `atan' takes either one argument or two:
   (define (atan arg1 . rest)
@@ -190,7 +190,7 @@
 		       (loop (- i 1)))))))
       (else #f)))
 
-  (define (@optional-arg arg-list default-value)
+  (define (%optional-arg arg-list default-value)
     (cond ((null? arg-list) default-value)
 	  ((null? (cdr arg-list)) (car arg-list))
 	  (else (%error "Too many arguments to procedure" arg-list))))
@@ -219,7 +219,7 @@
 
   (define (list . args) args)
 
-  (define (@reduce fn id lst)
+  (define (%reduce fn id lst)
     (let loop ((lst lst))
       (if (null? lst)
 	  id
@@ -304,24 +304,24 @@
   (define (odd? n)  (= (modulo n 2) 1))
   (define (even? n) (= (remainder n 2) 0))
 
-  (define >  (@extend-transitive-rel (lambda (x y) (< y x))))
-  (define >= (@extend-transitive-rel (lambda (x y) (<= y x))))
+  (define >  (%extend-transitive-rel (lambda (x y) (< y x))))
+  (define >= (%extend-transitive-rel (lambda (x y) (<= y x))))
 
   (define (min n . L)
     (do ((n n (if (<= n (car L))
-		  (@inexact-contagion n (car L))
-		  (@inexact-contagion (car L) n)))
+		  (%inexact-contagion n (car L))
+		  (%inexact-contagion (car L) n)))
 	 (L L (cdr L)))
 	((null? L) n)))
 
   (define (max n . L)
     (do ((n n (if (< (car L) n) 
-		  (@inexact-contagion n (car L))
-		  (@inexact-contagion (car L) n)))
+		  (%inexact-contagion n (car L))
+		  (%inexact-contagion (car L) n)))
 	 (L L (cdr L)))
 	((null? L) n)))
 
-  (define (@inexact-contagion x y)
+  (define (%inexact-contagion x y)
     (if (inexact? y)
 	(exact->inexact x)
 	x))
@@ -339,14 +339,14 @@
   (define (char>=? c1 c2) (not (char<? c1 c2)))
   (define (char>? c1 c2)  (char<? c2 c1))
 
-  (define (@char-ci-tester test?)
+  (define (%char-ci-tester test?)
     (lambda (c1 c2) (test? (char-upcase c1) (char-upcase c2))))
 
-  (define char-ci<?  (@char-ci-tester (lambda (c1 c2) (char<? c1 c2))))
-  (define char-ci<=? (@char-ci-tester (lambda (c1 c2) (char<=? c1 c2))))
-  (define char-ci=?  (@char-ci-tester (lambda (c1 c2) (char=? c1 c2))))
-  (define char-ci>=? (@char-ci-tester char>=?))
-  (define char-ci>?  (@char-ci-tester char>?))
+  (define char-ci<?  (%char-ci-tester (lambda (c1 c2) (char<? c1 c2))))
+  (define char-ci<=? (%char-ci-tester (lambda (c1 c2) (char<=? c1 c2))))
+  (define char-ci=?  (%char-ci-tester (lambda (c1 c2) (char=? c1 c2))))
+  (define char-ci>=? (%char-ci-tester char>=?))
+  (define char-ci>?  (%char-ci-tester char>?))
 
   (define (char-numeric? c)     (and (char<=? #\0 c) (char<=? c #\9)))
   (define (char-lower-case? c)  (and (char<=? #\a c) (char<=? c #\z)))
@@ -384,7 +384,7 @@
 
   ; Strings
 
-  (define (@string-compare <? =? length-compare?)
+  (define (%string-compare <? =? length-compare?)
     (lambda (s1 s2)
       (let ((limit (min (string-length s1) (string-length s2))))
 	(let loop ((i 0))
@@ -395,20 +395,20 @@
 	     (loop (+ i 1)))
 	    (else (<? (string-ref s1 i) (string-ref s2 i))))))))
 
-  (define string<?  (@string-compare char<? char=? (lambda (x y) (< x y))))
-  (define string<=? (@string-compare char<? char=? (lambda (x y) (<= x y))))
+  (define string<?  (%string-compare char<? char=? (lambda (x y) (< x y))))
+  (define string<=? (%string-compare char<? char=? (lambda (x y) (<= x y))))
 
   (define (string>? s1 s2)  (string<? s2 s1))
   (define (string>=? s1 s2) (string<=? s2 s1))
 
   (define string-ci<? 
-    (@string-compare char-ci<? char-ci=? (lambda (x y) (< x y))))
+    (%string-compare char-ci<? char-ci=? (lambda (x y) (< x y))))
 
   (define string-ci<=? 
-    (@string-compare char-ci<? char-ci=? (lambda (x y) (<= x y))))
+    (%string-compare char-ci<? char-ci=? (lambda (x y) (<= x y))))
 
   (define string-ci=? 
-    (@string-compare (lambda (x y) #f) char-ci=? (lambda (x y) (= x y))))
+    (%string-compare (lambda (x y) #f) char-ci=? (lambda (x y) (= x y))))
 
   (define (string-ci>=? s1 s2) (string-ci<=? s2 s1))
   (define (string-ci>? s1 s2)  (string-ci<? s2 s1))
@@ -472,7 +472,7 @@
 
   (define (newline . opt:port)
     (write-char #\newline
-		(@optional-arg opt:port (current-output-port))))
+		(%optional-arg opt:port (current-output-port))))
 
   (define (call-with-input-file file proc)
     (let ((port (open-input-file file)))
@@ -484,28 +484,7 @@
     (let ((port (open-output-file file)))
       (let ((result (proc port)))
 	(close-output-port port)
-	result)))
-
-  ;(define (with-input-from-file file proc)
-  ;  (let ((prev-port @current-input-port))
-  ;    (call-with-input-file file
-  ;      (lambda (port)
-  ;	(set! @current-input-port port)
-  ;	(proc)))
-  ;    (set! @current-input-port prev-port)))
-
-  ;(define (with-output-to-file file proc)
-  ;  (let ((prev-port @current-output-port))
-  ;    (call-with-output-file file
-  ;      (lambda (port)
-  ;	(set! @current-output-port port)
-  ;	(proc)))
-  ;    (set! @current-output-port prev-port)))
-
-  ;(define (current-input-port) @current-input-port)
-  ;(define (current-output-port) @current-output-port)
-
-)
+	result))))
 
 ;;;
 ;;; Reading
@@ -523,7 +502,7 @@
 (define read 
   (let ()
 
-    (define the-readtable (make-vector 256 @read-atom))
+    (define the-readtable (make-vector 256 %read-atom))
 
     (define (install-read-macro char reader)
       (vector-set! the-readtable (char->integer char) reader))
@@ -542,7 +521,7 @@
     ;           list ::= '(' ( ')' | rest-of-list )
     ;   rest-of-list ::= expr+ ( ')' | '.' expr ')' )
     (define (read-list in-port char)
-      (@skip-blanks in-port)
+      (%skip-blanks in-port)
       (let ((char (peek-char in-port)))
 	(cond 
 	  ((eof-object? char) (read-error in-port "Unexpected EOF in list"))
@@ -554,7 +533,7 @@
 	     (let ((head (read in-port)))
 	       (cons head
 		 (let loop ()
-		   (@skip-blanks in-port)
+		   (%skip-blanks in-port)
 		   (let ((char (peek-char in-port)))
 		     (cond
 		       ((eof-object? char) 
@@ -564,11 +543,11 @@
 			'())
 		       ((char=? char #\.)
 			(read-char in-port)
-			(let ((next (@read-atom in-port char)))
+			(let ((next (%read-atom in-port char)))
 			  (if (not (eq? next dot-symbol))
 			      (cons next (loop))
 			      (let ((result (read in-port)))
-				(@skip-blanks in-port)
+				(%skip-blanks in-port)
 				(if (not (eqv? (read-char in-port) #\) ))
 				    (read-error 
 				     in-port 
@@ -577,21 +556,21 @@
 		       (else (read-rest-of-list))))))))))))
 
     (define (read-number in-port)
-      (let ((n (@read-atom in-port)))
+      (let ((n (%read-atom in-port)))
 	(if (number? n)
 	    n
 	    (read-error in-port "Expected a number" n))))
 
     (define (read-error port message . irritants)
       (set! %error-cont #f)
-      (@complain "Read error" message irritants)
+      (%complain "Read error" message irritants)
       (%flush-input-line port)
       (%reset '*))
     
 
     ;; White space
     (let ((read-after (lambda (in-port char) 
-	                (@skip-blanks in-port)
+	                (%skip-blanks in-port)
 	                (read in-port))))
       (for-each (lambda (white) (install-read-macro white read-after))
 	        '(#\space #\tab #\newline #\return)))
@@ -607,11 +586,15 @@
       (lambda (in-port char)
 	(read-error in-port "Unbalanced parentheses")))
 
+    (install-read-macro #\@
+      (lambda (in-port char)
+	(read-error in-port "Bare '@' character")))
+
     (install-read-macro #\#
       (lambda (in-port char)
 	(if (memv (peek-char in-port) 
 		  '(#\x #\d #\o #\b #\e #\i #\X #\D #\O #\B #\E #\I))
-	    (let ((n (@read-atom in-port char)))
+	    (let ((n (%read-atom in-port char)))
 	      (if (number? n)
 		  n
 		  (read-error in-port "Not a number" n)))
@@ -623,7 +606,7 @@
 		 (let ((next (read-char in-port)))
 		   (if (and (char-alphabetic? next)
 			    (char-alphabetic? (peek-char in-port)))
-		       (let ((symbol (@read-atom in-port next)))
+		       (let ((symbol (%read-atom in-port next)))
 			 (let ((table '(; (backspace . #\backspace)
 					; (escape . #\escape)
 					; (page . #\page)
@@ -685,7 +668,7 @@
 	 (read in-port))))
 
     (lambda opt:in-port
-      (read (@optional-arg opt:in-port (current-input-port))))))
+      (read (%optional-arg opt:in-port (current-input-port))))))
 
 
 
@@ -811,7 +794,7 @@
   (define lap/append append)
 
   (define lap/restore 
-    (list @%restore))
+    (list %bop-restore))
 
   (define (lap/offset pos lap)
     (let ((offset (- (lap/position lap) pos)))
@@ -820,81 +803,81 @@
 		  lap))))
 
   (define (lap/jump pos lap)
-    (cons @%jump
+    (cons %bop-jump
 	  (lap/offset pos lap)))
 
   (define (lap/unless pos lap)
-    (cons @%unless
+    (cons %bop-unless
 	  (lap/offset pos lap)))
 
   (define (lap/var addr lap)
-    (cons @%var
+    (cons %bop-var
 	  (cons (lexical-address/depth addr)
 		(cons (lexical-address/offset addr)
 		      lap))))
 
   (define (lap/var! addr lap)
-    (cons @%var!
+    (cons %bop-var!
 	  (cons (lexical-address/depth addr)
 		(cons (lexical-address/offset addr)
 		      lap))))
 
   (define (lap/params count lap)
-    (cons @%params
+    (cons %bop-params
 	  (cons count lap)))
 
   (define (lap/&rest-params count lap)
-    (cons @%&rest-params
+    (cons %bop-&rest-params
 	  (cons count lap)))
 
   (define (lap/save pos lap)
-    (cons @%save 
+    (cons %bop-save 
 	  (lap/offset pos lap)))
 
   (define (lap/invoke lap)
-    (cons @%invoke lap))
+    (cons %bop-invoke lap))
 
   (define (lap/drop lap)
-    (cons @%drop lap))
+    (cons %bop-drop lap))
 
   (define (lap/prim-0 prim lap)
-    (cons @%prim-0
+    (cons %bop-prim-0
 	  (cons prim lap)))
 
   (define (lap/prim-1 prim lap)
-    (cons @%prim-1
+    (cons %bop-prim-1
 	  (cons prim lap)))
 
   (define (lap/prim-2 prim lap)
-    (cons @%prim-2
+    (cons %bop-prim-2
 	  (cons prim lap)))
 
   (define (lap/prim-3 prim lap)
-    (cons @%prim-3
+    (cons %bop-prim-3
 	  (cons prim lap)))
 
   (define (lap/lit datum constants lap)
-    (cons @%lit
+    (cons %bop-lit
 	  (cons (constants/lookup datum constants) 
 		lap)))
 
   (define (lap/glo symbol constants lap)
-    (cons @%glo
+    (cons %bop-glo
 	  (cons (constants/lookup symbol constants) 
 		lap)))
 
   (define (lap/glo! symbol constants lap)
-    (cons @%glo!
+    (cons %bop-glo!
 	  (cons (constants/lookup symbol constants) 
 		lap)))
 
   (define (lap/define symbol constants lap)
-    (cons @%define
+    (cons %bop-define
 	  (cons (constants/lookup symbol constants) 
 		lap)))
 
   (define (lap/proc code constants lap)
-    (cons @%proc
+    (cons %bop-proc
 	  (cons (constants/lookup code constants)
 		lap)))
 
@@ -1017,7 +1000,7 @@
 			       (expand-lambda-body body)
 			       `((lambda ,names . ,body)
 				 . ,(map (lambda (name exp)
-					   `(@label ,name ,exp))
+					   `(%label ,name ,exp))
 					 names
 					 exps))))))
 		   k))
@@ -1030,7 +1013,7 @@
 		    (pe 
 		     `((lambda ,vars 
 			 ,@(map (lambda (var exp) 
-				  `(set! ,var (@label ,var ,exp)))
+				  `(set! ,var (%label ,var ,exp)))
 				vars 
 				exps)
 			 (let () . ,body))
@@ -1125,10 +1108,10 @@
 				 ((eq? (car clause) 'else)
 				  clause)
 				 ((null? (cdar clause))
-				  `((@primitive eqv?
+				  `((%primitive eqv?
 				     ,sym ',(caar clause)) . ,(cdr clause)))
 				 (else
-				  `((@primitive memv
+				  `((%primitive memv
 				     ,sym ',(car clause)) . ,(cdr clause)))))
 			     (cdr rands)))))
 		   k))
@@ -1182,12 +1165,12 @@
                  ((%defmacro)
                   (assert (and (<= num-rands 3) (symbol? (car rands))))
                   (pe `(%define-macro ',(car rands)
-                                      (@label ,(car rands) (lambda ,(cadr rands) ,@(cddr rands))))
+                                      (%label ,(car rands) (lambda ,(cadr rands) ,@(cddr rands))))
                       k))
 
-		 ((@label)
+		 ((%label)
 		  (assert (= num-rands 2))
-                  ;; (@label NAME EXP) in a context labeled FOO
+                  ;; (%label NAME EXP) in a context labeled FOO
                   ;;  parses EXP in a context labeled (NAME . FOO).
                   ;;  This labels any closures created in EXP, for display
                   ;;  by put_object in utsvm.c, case a_closure.
@@ -1197,7 +1180,7 @@
 			     s
 			     k))
 
-		 ((@primitive)
+		 ((%primitive)
 		  (assert (and (<= 1 num-rands) (<= num-rands 4)))
                   (let* ((nr (- num-rands 1))
                          (prim (prim-lookup (car rands) nr)))
@@ -1232,7 +1215,7 @@
 
       (define (parse-call pe tail-ok? rator rands k)
 	(let ((lin (lambda (k2)
-		     (@reduce pe 
+		     (%reduce pe 
 			      (pe rator 
 				  (lap/invoke k2))
 			      rands))))
@@ -1249,7 +1232,7 @@
 		           ((3) lap/prim-3))
 	                 prim
 	                 k)))
-          (@reduce pe primop-k rands)))
+          (%reduce pe primop-k rands)))
 
       (define (prim-lookup sym num-rands)
         (cond ((assq sym (case num-rands
@@ -1373,7 +1356,7 @@
 	  (if (not ok?) (syntax-error "Bad syntax" exp)))
 	(cond
 	 ((vector? exp)
-	  `(@primitive list->vector
+	  `(%primitive list->vector
 		       ,(expand-quasiquote (vector->list exp) nesting)))
 	 ((not (pair? exp)) 
 	  (if (constant? exp) exp (list 'quote exp)))
@@ -1395,7 +1378,7 @@
 	  (if (= nesting 0)
 	      (if (null? (cdr exp))
 		  (cadar exp)
-		  `(@primitive append
+		  `(%primitive append
 			       ,(cadar exp)
 			       ,(expand-quasiquote (cdr exp) nesting)))
 	      (combine-skeletons (expand-quasiquote (car exp) (- nesting 1))
@@ -1415,7 +1398,7 @@
 		     (eqv? (my-eval right) (cdr exp)))
 		(list 'quote exp)
 		(list 'quote (cons (my-eval left) (my-eval right))))
-	    `(@primitive cons ,left ,right)))
+	    `(%primitive cons ,left ,right)))
 
       (define (constant? exp)
 	(if (pair? exp)
@@ -1456,18 +1439,18 @@
 	    (codify lap (constants->vector constants) #f lexical-env/empty))))))
 
 
-  (define (@make-code-vector constants-vec bytes label locals-map)
+  (define (%make-code-vector constants-vec bytes label locals-map)
     (vector 'code-vector constants-vec bytes label locals-map 0))
 
   (define (codify lap constants-vec label locals-map)
-    (@make-code-vector constants-vec
+    (%make-code-vector constants-vec
 		       (list->string (map integer->char lap))
 		       label
                        locals-map))
 
   (define (%eval form)
     ;; Compile to a top-level procedure with no params, and call it.
-    ((@make-closure '#() (parse-form form)))))
+    ((%make-closure '#() (parse-form form)))))
 
 
 ;;;; Misc macros
@@ -1528,7 +1511,7 @@
 
   (define %arguments-to-scheme '())
 
-  (define (@start-scheming)  ; called by utsvm once this fasl file is loaded
+  (define (%start-scheming)  ; called by utsvm once this fasl file is loaded
     (set! %arguments-to-scheme (cddr %command-line-arguments)) ; skip past the fasl file
     (cond ((pair? %arguments-to-scheme)
            (set! %reset (lambda (_) (%exit 1)))
@@ -1601,12 +1584,12 @@
     (call/cc
       (lambda (cont)
 	(set! %error-cont cont)
-	(@complain "Error" message irritants)
+	(%complain "Error" message irritants)
 	(%reset '*))))
 
   (define %error-cont '*)
 
-  (define (@complain error-type message irritants)
+  (define (%complain error-type message irritants)
     (newline) 
     (display "[")
     (display error-type)
@@ -1638,7 +1621,7 @@
 	    (list->vector (map car prim-3-list))))
 
   (define (dis proc)
-    (disassemble (@closure->code proc) -1))
+    (disassemble (%closure->code proc) -1))
 
   (define (disassemble code current-pc)
     (dump-asm (disassemble-instrucs code) 2 current-pc))
@@ -1712,9 +1695,9 @@
     (define (byte-ref offset) 
       (char->integer (string-ref (code->bytecodes code) (+ pc offset))))
     (define (take nbytes . args)
-      (let ((iname (vector-ref instruc-names (byte-ref 0))))
+      (let ((iname (vector-ref %instruc-names (byte-ref 0))))
         (k (+ nbytes 1) (cons iname args))))
-    (let ((specs (vector-ref @instruc-args (byte-ref 0))))
+    (let ((specs (vector-ref %instruc-args (byte-ref 0))))
       (cond ((null? specs) (take 0))
             ((not (null? (cdr specs)))
              (%error "Bad instruc specs" specs))
@@ -1755,7 +1738,7 @@
 (begin
 
   (define (cycle-write x . optional-port)
-    (let ((out (@optional-arg optional-port (current-output-port)))
+    (let ((out (%optional-arg optional-port (current-output-port)))
 	  (table (make-cycle-table)))
       (traverse table x)
       (cw out table x)
@@ -1925,17 +1908,17 @@
 
 
   ;;; Continuations
-  ;;; Implemented as a procedure with magical bytecode, with the interpreter's
-  ;;; stack saved as a Scheme vector in the closure's lex-env slot.
+  ;;; Implemented as a procedure with a particular code-vector, with the
+  ;;; interpreter's stack saved as a Scheme vector in the closure's lex-env slot.
 
   (define continuation? 
-    (let ((cont-code (call/cc @closure->code)))
+    (let ((cont-code (call/cc %closure->code)))
       (lambda (obj)
 	(and (procedure? obj)
-	     (eq? (@closure->code obj) cont-code)))))
+	     (eq? (%closure->code obj) cont-code)))))
 
   (define (continuation->stack cont)
-    (vector-ref (@closure->lex-env cont) 1))
+    (vector-ref (%closure->lex-env cont) 1))
 
 
   ;;; Continuation stack frames: contiguous segments of a stack vector (svec),

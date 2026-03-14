@@ -7,17 +7,17 @@
 
 ;;; Error-catching infrastructure
 
-(define @saved-reset %reset)
+(define saved-reset %reset)
 
 (define (errors? thunk)
   "Returns #t if thunk signals an error, #f otherwise."
   (call-with-current-continuation
     (lambda (escape)
       (set! %reset (lambda (x)
-                     (set! %reset @saved-reset)
+                     (set! %reset saved-reset)
                      (escape #t)))
       (thunk)
-      (set! %reset @saved-reset)
+      (set! %reset saved-reset)
       #f)))
 
 ;;; Test helper (integrates with r4rs.scm test harness if loaded)

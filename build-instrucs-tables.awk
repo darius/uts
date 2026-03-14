@@ -26,11 +26,11 @@ END {
     sfile = "opcodes.scm";
 
     for (i = 0; i < opnum; ++i) {
-        printf("(define @%%%s %d)\n", sname[i], i) >sfile;
+        printf("(define %%bop-%s %d)\n", sname[i], i) >sfile;
     }
     print "" >sfile;
 
-    print "(define instruc-names" >sfile;
+    print "(define %instruc-names" >sfile;
     printf("  '#(") >sfile;
     for (i = 0; i < opnum; ++i) {
         printf(" %s", sname[i]) >sfile;
@@ -38,7 +38,7 @@ END {
     print "))" >sfile;
     print "" >sfile;
 
-    print "(define @instruc-args" >sfile;
+    print "(define %instruc-args" >sfile;
     printf("  '#(") >sfile;
     for (i = 0; i < opnum; ++i) {
         printf(" (%s)", argspec[i]) >sfile;

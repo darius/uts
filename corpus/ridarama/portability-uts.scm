@@ -37,7 +37,4 @@
 ;; Call RECEIVER with the time it took to compute (PROC), and the result.
 (define timex
   (lambda (proc receiver)
-    (let* ((start (@runtime))
-	   (value (proc))
-	   (interval (- (@runtime) start)))
-      (receiver interval value))))
+    (apply receiver (%time proc))))

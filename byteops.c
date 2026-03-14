@@ -462,11 +462,11 @@ break; case bop_prim_1:
     break; case p1_atan:
         { acc = float_op1 (atan, x0); }
 
-    break; case p1_ATclosureTOlex_env:
+    break; case p1_closureTOlex_env:
         { vm_check_type (is_closure (x0), x0);
             acc = closure_lex_env (x0); }
 
-    break; case p1_ATclosureTOcode:
+    break; case p1_closureTOcode:
         { vm_check_type (is_closure (x0), x0);
             acc = closure_code (x0); }
 
@@ -486,7 +486,7 @@ break; case bop_prim_1:
     break; case p1_length:
         { callout1 (prim_list_length); }
 
-    break; case p1_ATskip_blanks:
+    break; case p1_skip_blanks:
         { callout1 (prim_skip_blanks); }
 
     break; case p1_flush_input_line:
@@ -627,7 +627,7 @@ break; case bop_prim_2:
                       vm_range_error (i);
                   acc = vector_ref (x1, i); } }
 
-      break; case p2_ATmake_closure:
+      break; case p2_make_closure:
           {
               vm_check_type (is_vector (x1), x1);
               vm_check_type (is_vector (x0), x0);
@@ -660,10 +660,10 @@ break; case bop_prim_2:
               vm_check_type (is_char (x0), x0);
               acc = make_boolean (char_value (x1) == char_value (x0)); }
 
-      break; case p2_ATread_atom:
+      break; case p2_read_atom:
           { callout2 (prim_read_atom); }
 
-      break; case p2_ATdisplay_string:
+      break; case p2_display_string:
           { goto bad_opcode_label; }
 
       break; case p2_write_char:

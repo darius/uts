@@ -19,7 +19,7 @@
 #include <time.h>
 
 
-static clock_t clock_start;	/* needed by (@runtime) */
+static clock_t clock_start;	/* needed by (%runtime) */
 
 
 typedef enum { false=0, true=1 } Flag;
@@ -2013,7 +2013,7 @@ setup (void)
   error_symbol = string_to_symbol (c_string ("%error"));
 
   all_entered_code_vectors_symbol = 
-    string_to_symbol (c_string ("@all-entered-code-vectors"));
+    string_to_symbol (c_string ("%all-entered-code-vectors"));
   set_global_value (all_entered_code_vectors_symbol, nil);
 
   {
@@ -2392,7 +2392,7 @@ main (int argc, char **argv)
     unexpected_vm_error ();
 
   { /* Start the main loop if the fasl set one up */
-    Object driver = string_to_symbol (c_string ("@start-scheming"));
+    Object driver = string_to_symbol (c_string ("%start-scheming"));
     Object proc = global_value (driver);
     if (is_closure (proc))
       invoke0 (proc);

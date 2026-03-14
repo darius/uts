@@ -51,14 +51,14 @@
 1 asin
 1 acos
 1 atan
-1 @closure->lex-env
-1 @closure->code
+1 %closure->lex-env
+1 %closure->code
 1 null?
 1 not
 1 char-whitespace?
 1 reverse
 1 length
-1 @skip-blanks
+1 %skip-blanks
 1 %flush-input-line
 1 %read-fasl-header
 1 %read-fasl
@@ -80,7 +80,7 @@
 2 set-cdr!
 2 string-ref
 2 vector-ref
-2 @make-closure
+2 %make-closure
 2 expt
 2 atan
 2 assq
@@ -88,8 +88,8 @@
 2 char<?
 2 char<=?
 2 char=?
-2 @read-atom
-2 @display-string
+2 %read-atom
+2 %display-string
 2 write-char
 2 +
 2 -

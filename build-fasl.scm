@@ -6,6 +6,11 @@
 ;; source or fasl; I dropped this feature because I wasn't using it.
 ;; (compile-file was like build-system minus the all-primitive-defs.)
 
+;; If these have changed since uts.fasl was last built, we need
+;; the new defs in place of the current ones:
+(load "opcodes.scm")
+(load "primcodes.scm")
+
 (begin
 
   ;;; Compile the primitives + the Scheme source to a fasl file.
@@ -35,7 +40,7 @@
 
   (define (prim-def-source-code prim-names args)
     `(begin
-       ,@(@reduce (lambda (prim-name defs)
+       ,@(%reduce (lambda (prim-name defs)
 		    (if (variable-arity? prim-name)
 			defs
 			(cons `(define ,prim-name
@@ -46,16 +51,16 @@
 		  prim-names)))
 
   (define closure-for-apply
-    (@make-closure '#()
-		   (codify (cons @%apply '())
+    (%make-closure '#()
+		   (codify (cons %bop-apply '())
 			   '#()
 			   'apply
                            lexical-env/empty)))
 
   (define closure-for-call/cc
-    (@make-closure '#()
+    (%make-closure '#()
 		    (codify (lap/params 1
-			      (cons @%get-cc
+			      (cons %bop-get-cc
 				(lap/var (make-lexical-address 0 0)
 				  (lap/invoke '()))))
 			    '#()
@@ -154,8 +159,8 @@
        (recur (code->constants obj))
        (write-char (tag obj) port))
       ((procedure? obj)
-       (recur (@closure->code obj))
-       (recur (@closure->lex-env obj))
+       (recur (%closure->code obj))
+       (recur (%closure->lex-env obj))
        (write-char (tag obj) port))
       ((vector? obj)
        (let loop ((i (- (vector-length obj) 1)))

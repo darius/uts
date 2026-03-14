@@ -25,7 +25,6 @@ NF != 2 { print "bad spec line" NR; print; exit(1); }
         gsub(/\//, "DIV", cname);
         gsub(/!/, "B", cname);
         gsub(/%/, "", cname);   # TODO define a replacement
-        gsub(/@/, "AT", cname);
     }
 
     n = count[arity]++;
