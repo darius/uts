@@ -23,7 +23,7 @@ utsvm: utsvm.c config.h opcodes.h prims.h byteops.c
 opcodes.h opcodes.scm: build-instrucs-tables.awk instrucs
 	awk -f build-instrucs-tables.awk instrucs
 
-primcodes.h primcodes.scm: build-prim-codes.awk prims
+prims.h primcodes.scm: build-prim-codes.awk prims
 	awk -f build-prim-codes.awk prims
 
 clean:
