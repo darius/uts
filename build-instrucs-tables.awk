@@ -1,6 +1,7 @@
 # Generate opcodes.h and opcodes.scm from instrucs
 
 /^#/ { next; }
+NF == 0 { next; }
 
 NF != 2 && NF != 3 { print "bad spec line"; print; exit(1); }
 

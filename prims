@@ -1,4 +1,12 @@
-# blah blah XXX doc
+# Primitive procedures in the bytecode VM.
+
+# Columns:
+# Arity (0..3), Name (Scheme symbol)
+
+# The same primitive could appear here with more than one arity (overloaded)
+# although I don't think any does, currently.
+
+# If you change this, be deliberate about bootstrapping.
 
 0 current-input-port
 0 current-output-port

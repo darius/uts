@@ -1,4 +1,12 @@
-# to be processed...
+# The opcodes in bytecode, auto-numbered from 0.
+# If you change this table, be deliberate about bootstrapping.
+
+# Columns:
+
+# scheme-name
+#       c-name
+#                               arg-spec for dissassembler
+
 lit	lit			d
 var	varref			v
 var!	varset			v
