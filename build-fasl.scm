@@ -10,8 +10,9 @@
 
   ;;; Compile the primitives + the Scheme source to a fasl file.
   ;; N.B. *open-code-primitives?* must be true for the primitives to compile correctly
-  (define (build-system scheme-filename fasl-filename)
-    (compile-to-fasl (cons (all-primitive-defs) (read-all scheme-filename))
+  (define (build-system fasl-filename sources)
+    (compile-to-fasl (cons (all-primitive-defs)
+                           (apply append (map read-all sources)))
                      fasl-filename))
 
   (define (read-all filename)
@@ -197,6 +198,8 @@
 (define (length-1 ls)
   (- (length ls) 1))
 
-;; If we're being loaded from the command line with two filename arguments, build the system.
-(if (= (length %arguments-to-scheme) 3)
-    (apply build-system (cdr %arguments-to-scheme)))
+
+;; If we're being loaded from the command line with >=2 filename arguments, build the system.
+(if (<= 3 (length %arguments-to-scheme))
+    (let ((filenames (cdr %arguments-to-scheme)))
+      (build-system (car filenames) (cdr filenames))))

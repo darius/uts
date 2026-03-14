@@ -1,0 +1,24 @@
+# to be processed...
+lit	lit			d
+var	varref			v
+var!	varset			v
+glo	global_ref		d
+glo!	global_set		d
+define	global_define		d
+unless	unless			w
+jump	jump			w
+proc	proc			d
+params	params 			locals
+&rest-params rest_params	locals
+restore	restore			
+invoke	invoke				
+save	save			w
+apply	apply				
+get-cc	get_cc				
+set-cc	set_cc				
+prim-0	prim_0                  b
+prim-1	prim_1                  b
+prim-2	prim_2                  b
+prim-3	prim_3                  b
+drop	drop				
+halt	halt				

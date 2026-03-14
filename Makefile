@@ -17,14 +17,18 @@ endif
 
 all: utsvm
 
-utsvm: utsvm.c instruc-cases.c config.h
+utsvm: utsvm.c config.h opcodes.h prims.h byteops.c
 	$(CC) $(CFLAGS) $(GC_CFLAGS) utsvm.c $(GC_LIBS) -lm -o utsvm
 
-instruc-cases.c: instrucs.c make-instrucs.awk
-	awk -f make-instrucs.awk instrucs.c >instruc-cases.c
+opcodes.h opcodes.scm: build-instrucs-tables.awk instrucs
+	awk -f build-instrucs-tables.awk instrucs
+
+primcodes.h primcodes.scm: build-prim-codes.awk prims
+	awk -f build-prim-codes.awk prims
 
 clean:
-	rm -f utsvm instruc-cases.c
+	rm -f utsvm
+	rm -f opcodes.h opcodes.scm primcodes.h primcodes.scm
 	rm -f test/tmp[123]
 
 install: utsvm uts.fasl

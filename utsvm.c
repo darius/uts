@@ -2191,8 +2191,6 @@ enter_interpreter (Interpreter *interp)
       switch (byteop)
 	{
 
-#include "instruc-cases.c"
-
 	default: 
 	bad_opcode_label:
           error_msg = "Bad opcode";
@@ -2229,6 +2227,17 @@ enter_interpreter (Interpreter *interp)
 
 	stack_overflow: 
 	  fatal_error ("Stack overflow");
+
+#define vm_type_error(x)    do { acc = (x); goto type_error_label; } while (0)
+#define vm_range_error(x)  \
+               do { acc = make_fixnum (x); goto range_error_label; } while (0)
+
+#define vm_check_type(f,x)  do { if (!(f)) vm_type_error (x); } while (0)
+
+#include "opcodes.h"
+#include "prims.h"
+#include "byteops.c"
+
 	}
     }
 }

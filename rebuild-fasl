@@ -1,7 +1,7 @@
 set -e
 
 echo Compiling fasl...
-./uts build-fasl.scm uts.scm uts.new.fasl
+./uts build-fasl.scm uts.new.fasl opcodes.scm primcodes.scm uts.scm
 
 echo Compiled new fasl. Trying it...
 ./utsvm uts.new.fasl test/test.scm
