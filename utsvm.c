@@ -1647,27 +1647,34 @@ write_object (FILE *file, Object obj)
 
 /* --- fasl reader --- */
 
-static const int MAJOR_VERSION = 4;
-static const int MINOR_VERSION = 0;
+static const unsigned char the_fasl[] = {
+#include "init.c"
+};
+static const int fasl_size = sizeof the_fasl;
+static int fasl_ptr = 0;
+
+static int
+fasl_next (void)
+{
+  assert (fasl_ptr < fasl_size);
+  return the_fasl[fasl_ptr++];
+}
 
 static int 
-read_unsigned8 (FILE *in) 
+read_unsigned8 (void) 
 {
-  int c = getc (in);
-  if (c == EOF)
-    vm_error ("Premature EOF", nil);
-  return c;
+  return fasl_next ();
 }
 
 static int64_t
-read_int (FILE *in)
+read_int (void)
 {
   /* 7-bit varint with zigzag decoding */
   uint64_t u = 0;
   int shift = 0;
   int byte;
   do {
-    byte = read_unsigned8 (in);
+    byte = read_unsigned8 ();
     u |= (uint64_t)(byte & 0x7f) << shift;
     shift += 7;
   } while (byte & 0x80);
@@ -1675,29 +1682,14 @@ read_int (FILE *in)
   return (u >> 1) ^ -(int64_t)(u & 1);
 }
 
-/* RECOVERABLE */
-static void
-read_fasl_header (FILE *in)
-{
-  if (read_unsigned8 (in) != 0xFA
-      || read_unsigned8 (in) != 0xDD
-      || read_unsigned8 (in) != 0xF0
-      || read_unsigned8 (in) != 0x0D)
-    vm_error ("Wrong magic number", nil);
-
-  if (read_unsigned8 (in) != MAJOR_VERSION
-      || MINOR_VERSION < read_unsigned8 (in))
-    vm_error ("Fasl produced by incompatible version", nil);
-}
-
 static Object 
-undump_string (FILE *in)
+undump_string (void)
 {
-  int i, n = read_int (in);
+  int i, n = read_int ();
   Object str = make_string (n);
   unsigned char *s = string_ptr (str);
   for (i = 0; i < n; ++i)
-    s [i] = read_unsigned8 (in);
+    s [i] = read_unsigned8 ();
   return str;
 }
 
@@ -1723,7 +1715,7 @@ stack_error (void)
 
 /* RECOVERABLE */
 static Object 
-read_fasl (FILE *in)
+read_fasl (void)
 {
   Object o1 = nil, o2 = nil, o3 = nil, o4 = nil;
 
@@ -1735,76 +1727,63 @@ read_fasl (FILE *in)
   Object seen_vector = make_vector (max_seen, nil);
   int nseen = 0;
 
-  for (;;) 
+  fasl_ptr = 0;
+  while (fasl_ptr < fasl_size)
     {
-      int tag = getc (in);
+      int tag = fasl_next ();
       switch (tag) 
 	{
-	case EOF: 
-          if (sp == 1)
-            {
-              POP (o1);
-              return o1;
-            }
-	  vm_error ("Premature EOF or stack size != 1", nil);
-	  break;
-	case 'P': 
+	default:
+	  vm_error ("Unrecognized tag", make_fixnum (tag));
+	break; case 'P': 
 	  POP (o1);
 	  POP (o2);
           o3 = cons (o1, o2);
           if (nseen < max_seen) vector_set (seen_vector, nseen++, o3);
 	  PUSH (o3);
-	  break;
-        case '=':
+        break; case '=':
           {
-            int i = read_int (in);
+            int i = read_int ();
             if (i < 0 || nseen <= i) vm_error ("=ref out of range", make_fixnum (i));
             PUSH (vector_ref (seen_vector, i));
-            break;
           }
-	case 'V': 
+	break; case 'V': 
 	  {
-	    int i, n = read_int (in);
+	    int i, n = read_int ();
 	    Object vec = make_vector (n, nil);
 	    Object *v = vector_ptr (vec);
 	    for (i = 0; i < n; ++i)
 	      POP (v [i]);
 	    PUSH (vec);
-	    break;
 	  }
-	case 'O':
+	break; case 'O':
 	  POP (o1);
 	  POP (o2);
 	  POP (o3);
 	  POP (o4);
 	  PUSH (make_code_vector (o1, make_byte_vector (o2), o3, o4));
-	  break;
-	case 'L':
+	break; case 'L':
 	  POP (o1);
 	  POP (o2);
 	  PUSH (make_closure (o1, o2));
-	  break;
-	case 'Y': 
+	break; case 'Y': 
 	  {
-	    int i, n = read_int (in);
+	    int i, n = read_int ();
 	    Object str = make_string (n);
 	    unsigned char *s = string_ptr (str);
 	    for (i = 0; i < n; ++i)
-	      s [i] = tolower (read_unsigned8 (in));
+	      s [i] = tolower (read_unsigned8 ());
 	    o3 = string_to_symbol (str);
 	    PUSH (o3);
             if (nseen < max_seen) vector_set (seen_vector, nseen++, o3);
-	    break;
 	  }
-	case 'U':
+	break; case 'U':
 	  PUSH (nil);
-	  break;
-	case 'I':
-	  PUSH (make_fixnum (read_int (in)));
-	  break;
-	case 'B': 
+	break; case 'I':
+	  PUSH (make_fixnum (read_int ()));
+	break; case 'B': 
 	  {			/* simpler to have separate codes for #t/#f */
-	    int c = read_unsigned8 (in);
+	    int c = read_unsigned8 ();
 	    Object b;
 	    if (c == 't')
 	      b = obj_true;
@@ -1813,23 +1792,24 @@ read_fasl (FILE *in)
 	    else
 	      vm_error ("Expected a boolean", nil);
 	    PUSH (b);
-	    break;
 	  }
-	case 'S':
-	  PUSH (undump_string (in));
-	  break;
-	case 'C':
-	  PUSH (make_char ((char) read_unsigned8 (in)));
-	  break;
-	case 'R':
+	break; case 'S':
+	  PUSH (undump_string ());
+	break; case 'C':
+	  PUSH (make_char ((char) read_unsigned8 ()));
+	break; case 'R':
 	  fatal_error ("Can't load doubles yet");
 	  /* FIXME: call to string_to_number here */
-	  /*      PUSH (new Double (undump_string (in).toString ())); */
-	  break;
-	default:
-	  vm_error ("Unrecognized tag", make_fixnum (tag));
+	  /*      PUSH (new Double (undump_string ().toString ())); */
 	}
     }
+  if (sp == 1)
+    {
+      POP (o1);
+      return o1;
+    }
+  vm_error ("Premature EOF or stack size != 1", nil);
+  return nil;
 }
 
 
@@ -1912,8 +1892,8 @@ prim_read_fasl (Object x0)
 {
   check_type (is_input_port (x0), x0);
   check_openness (x0);
-  read_fasl_header (port_file (x0));
-  return read_fasl (port_file (x0)); 
+  // XXX this is unwanted now, rm me
+  return read_fasl ();
 }
 
 static Object
@@ -2329,14 +2309,9 @@ invoke0 (Object closure)
 
 
 static void
-run_fasl (const char *filename)
+run_fasl (void)
 {
-  FILE *in = fopen (filename, "rb");
-  if (!in)
-    fatal_error (strerror (errno));
-
-  read_fasl_header (in);
-  volatile Object codes = read_fasl (in);
+  volatile Object codes = read_fasl ();
   check_type (is_vector (codes), codes);
 
   for (volatile int i = 0; i < vector_length (codes); ++i) 
@@ -2385,7 +2360,7 @@ main (int argc, char **argv)
 
   if (argc < 2)
     fatal_error ("usage: utsvm uts.fasl [file.scm] [args]");
-  run_fasl (argv [1]);
+  run_fasl ();
 
   /* Reestablish catcher clobbered by run_fasl() */
   if (0 != setjmp (vm_error_catch_point))

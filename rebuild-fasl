@@ -1,16 +1,17 @@
 set -e
 
 echo Compiling fasl...
-./uts build-fasl.scm uts.new.fasl opcodes.scm primcodes.scm uts.scm
+cp init.c init.c.backup
+./uts build-fasl.scm init.c opcodes.scm primcodes.scm uts.scm
+make
 
-echo Compiled new fasl. Trying it...
-./utsvm uts.new.fasl test/test.scm
+echo Compiled new fasl. If the test breaks, do mv init.c.backup init.c, then make.
+./uts test/test.scm
 
-if cmp uts.fasl uts.new.fasl
+if cmp init.c.backup init.c
 then
-  echo uts.fasl unchanged.
+  echo init.c unchanged.
 else
-  mv uts.fasl uts.old.fasl
-  mv uts.new.fasl uts.fasl
-  echo New uts.fasl built.
+  mv init.c.backup init.old.c
+  echo New init.c built.
 fi

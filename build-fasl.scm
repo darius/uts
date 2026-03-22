@@ -1,20 +1,33 @@
-;;;; Building a new uts.fasl file.
-;;;; fasl is a binary RPN format.
+;;;; Building a new init image as C byte array literal.
+;; uts build-fasl.scm "init.c" opcodes.scm primcodes.scm uts.scm
 
-;; It'd be easy to compile-file from an arbitrary Scheme file to a
-;; fasl file, and overload (load filename) to load from either Scheme
-;; source or fasl; I dropped this feature because I wasn't using it.
-;; (compile-file was like build-system minus the all-primitive-defs.)
+(define char->ascii char->integer)  ;; NB not portable Scheme
 
-;; If these have changed since uts.fasl was last built, we need
-;; the new defs in place of the current ones:
-(load "opcodes.scm")
-(load "primcodes.scm")
+(define nwritten 0)
+
+(define (another port)
+  (set! nwritten (+ nwritten 1))
+  (write-char #\, port)
+  (write-char (if (= 0 (modulo nwritten 16)) #\newline #\space)
+              port))
+
+(define (write-tag char port)
+  (write-char #\' port)
+  (write-char char port)
+  (write-char #\' port)
+  (another port))
+
+(define (write-byte byte port)
+  (write byte port)
+  (another port))
+
+
 
 (begin
 
   ;;; Compile the primitives + the Scheme source to a fasl file.
   ;; N.B. *open-code-primitives?* must be true for the primitives to compile correctly
+  ;; TODO avoid that requirement by using %primitive form instead
   (define (build-system fasl-filename sources)
     (compile-to-fasl (cons (all-primitive-defs)
                            (apply append (map read-all sources)))
@@ -84,29 +97,8 @@
 (define (%write-fasl obj filename)
   (call-with-output-file filename
     (lambda (out)
-      (%write-fasl-header out)
       (let ((ref-table (make-eq-table)))
         (%write-fasl-obj obj ref-table out)))))
-
-(define major-version 4)
-(define minor-version 0)
-
-(define (%write-fasl-header port)
-
-  (define (write-byte byte)
-    (write-char (integer->char byte) port))
-
-  (define (write-unsigned unsigned)
-    (write-byte (quotient unsigned 256))
-    (write-byte (remainder unsigned 256)))
-
-  ;; Magic number.
-  (write-unsigned #xFADD)
-  (write-unsigned #xF00D)
-
-  ;; Version number.
-  (write-byte major-version)
-  (write-byte minor-version))
 
 (define (%write-fasl-obj obj ref-table port)
 
@@ -131,58 +123,59 @@
     ;; zigzag: 0->0, -1->1, 1->2, -2->3, 2->4, ...
     (let loop ((n (if (< n 0) (- (* -2 n) 1) (* 2 n))))
       (if (< n 128)
-          (write-char (integer->char n) port)
+          (write-byte n port)
           (begin
-            (write-char (integer->char (+ 128 (remainder n 128))) port)
+            (write-byte (+ 128 (remainder n 128)) port)
             (loop (quotient n 128))))))
 
   (define (dump-string str)
     (dump-int (string-length str))
-    (display str port))
+    (for-each (lambda (ch) (write-byte (char->ascii ch) port))
+              (string->list str)))
 
   (let recur ((obj obj))
     (cond
       ((and (or (pair? obj) (symbol? obj))
             (ref-table 'get obj))
        => (lambda (index)
-            (write-char #\= port)
+            (write-tag #\= port)
             (dump-int index)))
       ((pair? obj)
        (recur (cdr obj))
        (recur (car obj))
-       (write-char (tag obj) port)
+       (write-tag (tag obj) port)
        (ref-table 'add obj))
       ((code? obj)
        (recur (code->locals-map obj))
        (recur (code->label obj))
        (recur (code->bytecodes obj))
        (recur (code->constants obj))
-       (write-char (tag obj) port))
+       (write-tag (tag obj) port))
       ((procedure? obj)
        (recur (%closure->code obj))
        (recur (%closure->lex-env obj))
-       (write-char (tag obj) port))
+       (write-tag (tag obj) port))
       ((vector? obj)
        (let loop ((i (- (vector-length obj) 1)))
 	 (cond ((<= 0 i)
 		(recur (vector-ref obj i))
 		(loop (- i 1)))))
-       (write-char (tag obj) port)
+       (write-tag (tag obj) port)
        (dump-int (vector-length obj)))
       ((symbol? obj)
-       (write-char #\Y port)
+       (write-tag #\Y port)
        (dump-string (symbol->string obj))
        (ref-table 'add obj))
       (else
         (let ((obj-tag (tag obj)))
-	  (write-char obj-tag port)
+	  (write-tag obj-tag port)
 	  (case obj-tag
 	    ((#\Y) (dump-string (symbol->string obj))) ;YYY redundant
 	    ((#\U) 'ignore)
 	    ((#\I) (dump-int obj))
-	    ((#\B) (write-char (if obj #\t #\f) port))
+	    ((#\B) (write-tag (if obj #\t #\f) port))
 	    ((#\S) (dump-string obj))
-	    ((#\C) (write-char obj port))
+	    ((#\C) (write-byte (char->ascii obj) port))
 	    ((#\R) (dump-string (number->string obj)))
 	    (else (%error "undumpable" obj))))))))
 
