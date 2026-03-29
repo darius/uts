@@ -1,5 +1,4 @@
 ;;;; Building a new init image as C byte array literal.
-;; uts build-fasl.scm "init.c" opcodes.scm primcodes.scm uts.scm
 
 (define char->ascii char->integer)  ;; NB not portable Scheme
 

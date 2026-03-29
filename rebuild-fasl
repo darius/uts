@@ -2,7 +2,7 @@ set -e
 
 echo Compiling fasl...
 cp init.c init.c.backup
-./uts build-fasl.scm init.c opcodes.scm primcodes.scm uts.scm
+./uts build-fasl.scm init.c opcodes.scm primcodes.scm abcs/primitives.scm abcs/read.scm abcs/uts.scm
 make
 
 echo Compiled new fasl. If the test breaks, do mv init.c.backup init.c, then make.
