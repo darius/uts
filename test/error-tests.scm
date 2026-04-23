@@ -1,9 +1,9 @@
 ;;;; error-tests.scm - Tests for expected error conditions
 ;;;;
-;;;; Usage: (load "r4rs.scm") (load "error-tests.scm")
-;;;;
 ;;;; Note: Error messages still print to output (noisy but functional).
 ;;;; The errors? function works by temporarily replacing %reset.
+
+(load "testlib.scm")
 
 ;;; Error-catching infrastructure
 
@@ -264,6 +264,5 @@
 
 ;;; Report results (if r4rs.scm harness is loaded)
 
-(if (defined? 'report-errs)
-    (report-errs)
-    (display "Error tests completed.\n"))
+(report-errs)
+(raise-errs-to-os)

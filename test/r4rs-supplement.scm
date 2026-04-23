@@ -1,9 +1,6 @@
 ;;;; r4rs-supplement.scm - Additional R4RS tests for functions not in Jaffer's suite
 ;;;; Tests math functions, edge cases, etc.
 ;;;;
-;;;; Usage: (load "r4rs.scm") (load "r4rs-supplement.scm")
-;;;; Or: ./uts uts.fasl -e '(load "r4rs.scm") (load "r4rs-supplement.scm") (%exit 0)'
-;;;;
 ;;;; UTS-specific behaviors (deviations from R4RS):
 ;;;;   - number->string uses uppercase hex (R4RS specifies lowercase)
 ;;;;
@@ -13,7 +10,8 @@
 ;;;;   - No delay/force (requires macros)
 ;;;;   - No char-ready?, transcript-on/off
 
-;;; Requires r4rs.scm to be loaded first (provides test, SECTION, report-errs)
+;;; (provides test, SECTION, report-errs)
+(load "testlib.scm")
 
 ;; Approximate equality for floating point
 (define (approx= a b tolerance)
@@ -492,3 +490,4 @@
 ;;;
 
 (report-errs)
+(raise-errs-to-os)

@@ -1,0 +1,15 @@
+# Run all of these tests
+# TODO unify with ../run-tests
+
+set -e
+cd "$(dirname "$0")"
+
+../uts examples.scm
+
+../uts test.scm
+
+../uts r4rs.scm     # TODO (test-cont) (test-sc4) (test-delay)
+
+../uts r4rs-supplement.scm
+
+../uts error-tests.scm

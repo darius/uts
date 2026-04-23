@@ -1,5 +1,8 @@
-;;;; `r4rs.scm' Test correctness of scheme implementations.
+;;;; From: `r4rs.scm' Test correctness of scheme implementations.
 ;;; Copyright (C) 1991, 1992, 1993, 1994, 1995 Aubrey Jaffer.
+
+;;;; The framework has been extracted to testlib.scm which must be loaded first.
+(load "testlib.scm")
 
 ;;; This includes examples from
 ;;; William Clinger and Jonathan Rees, editors.
@@ -24,39 +27,6 @@
 
 ;;; send corrections or additions to jaffer@ai.mit.edu or
 ;;; Aubrey Jaffer, 84 Pleasant St., Wakefield MA 01880, USA
-
-(define cur-section '())(define errs '())
-(define SECTION (lambda args
-		  (display "SECTION") (write args) (newline)
-		  (set! cur-section args) #t))
-(define record-error (lambda (e) (set! errs (cons (list cur-section e) errs))))
-
-(define test
-  (lambda (expect fun . args)
-    (write (cons fun args))
-    (display "  ==> ")
-    ((lambda (res)
-      (write res)
-      (newline)
-      (cond ((not (equal? expect res))
-	     (record-error (list res expect (cons fun args)))
-	     (display " BUT EXPECTED ")
-	     (write expect)
-	     (newline)
-	     #f)
-	    (else #t)))
-     (if (procedure? fun) (apply fun args) (car args)))))
-(define (report-errs)
-  (newline)
-  (if (null? errs) (display "Passed all tests")
-      (begin
-	(display "errors were:")
-	(newline)
-	(display "(SECTION (got expected (call)))")
-	(newline)
-	(for-each (lambda (l) (write l) (newline))
-		  errs)))
-  (newline))
 
 (SECTION 2 1);; test that all symbol characters are supported.
 '(+ - ... !.. $.+ %.- &.! *.: /:. :+. <-. =. >. ?. ~. _. ^.)
@@ -896,7 +866,7 @@
 (test #t input-port? (current-input-port))
 (test #t output-port? (current-output-port))
 (test #t call-with-input-file "r4rs.scm" input-port?)
-(define this-file (open-input-file "r4rs.scm"))
+(define this-file (open-input-file "testlib.scm"))
 (test #t input-port? this-file)
 (SECTION 6 10 2)
 (test #\; peek-char this-file)
@@ -964,7 +934,6 @@
   (test write-test-obj 'load foo)
   (report-errs))
 
-(report-errs)
 (if (and (string->number "0.0") (inexact? (string->number "0.0")))
     (test-inexact))
 
@@ -972,8 +941,12 @@
   (if (and n (exact? n))
       (test-bignum)))
 (newline)
-(display "To fully test continuations, Scheme 4, and DELAY/FORCE do:")
+(display "To fully test DELAY/FORCE do:")
 (newline)
-(display "(test-cont) (test-sc4) (test-delay)")
+(display "(test-delay)")
 (newline)
+(test-cont)
+(test-sc4)
+(report-errs)
+(raise-errs-to-os)
 "last item in file"
