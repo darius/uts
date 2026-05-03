@@ -7,4 +7,4 @@ scheme --script load-init.scm
 
 # Afterwards, new-init.c has the new version of init.c. Currently you have to do the rest by hand:
 # mv new-init.c init.c
-# make && ./run-test && test/run-test && ./run-bench && corpus/run-corpus
+# make && ./run-tests && test/run-tests && ./run-bench && corpus/run-corpus
