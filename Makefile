@@ -17,7 +17,7 @@ endif
 
 all: utsvm
 
-utsvm: utsvm.c config.h opcodes.h prims.h byteops.c init.c
+utsvm: utsvm.c config.h opcodes.h prims.h byteops.c init.h init.c
 	$(CC) $(CFLAGS) $(GC_CFLAGS) utsvm.c $(GC_LIBS) -lm -o utsvm
 
 opcodes.h opcodes.scm: build-instrucs-tables.awk instrucs

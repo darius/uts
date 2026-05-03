@@ -866,12 +866,6 @@ make_code_vector (Object data, Object bytecodes, Object label, Object locals_map
   }
 }
 
-fast Object 
-make_byte_vector (Object str)
-{
-  return str;
-}
-
 /* RECOVERABLE */
 /* The name is misleading: it also skips Lisp comments. */
 static void
@@ -1647,6 +1641,8 @@ write_object (FILE *file, Object obj)
 
 /* --- fasl reader --- */
 
+#include "init.h"
+
 static const unsigned char the_fasl[] = {
 #include "init.c"
 };
@@ -1717,11 +1713,11 @@ stack_error (void)
 static Object 
 read_fasl (void)
 {
-  Object o1 = nil, o2 = nil, o3 = nil, o4 = nil;
-
   Object fasl_stack = make_vector (STACK_SIZE, nil);
   Object *stack_base = vector_ptr (fasl_stack);
   int sp = 0;			/* stack pointer */
+
+  Object o1 = nil, o2 = nil, o3 = nil;
 
   enum { max_seen = 5000 };       // TODO make a config param, I guess
   Object seen_vector = make_vector (max_seen, nil);
@@ -1735,19 +1731,19 @@ read_fasl (void)
 	{
 	default:
 	  vm_error ("Unrecognized tag", make_fixnum (tag));
-	break; case 'P': 
+	break; case ini_cons: 
 	  POP (o1);
 	  POP (o2);
           o3 = cons (o1, o2);
           if (nseen < max_seen) vector_set (seen_vector, nseen++, o3);
 	  PUSH (o3);
-        break; case '=':
+        break; case ini_ref:
           {
             int i = read_int ();
             if (i < 0 || nseen <= i) vm_error ("=ref out of range", make_fixnum (i));
             PUSH (vector_ref (seen_vector, i));
           }
-	break; case 'V': 
+	break; case ini_vector: 
 	  {
 	    int i, n = read_int ();
 	    Object vec = make_vector (n, nil);
@@ -1756,17 +1752,11 @@ read_fasl (void)
 	      POP (v [i]);
 	    PUSH (vec);
 	  }
-	break; case 'O':
-	  POP (o1);
-	  POP (o2);
-	  POP (o3);
-	  POP (o4);
-	  PUSH (make_code_vector (o1, make_byte_vector (o2), o3, o4));
-	break; case 'L':
+	break; case ini_closure:
 	  POP (o1);
 	  POP (o2);
 	  PUSH (make_closure (o1, o2));
-	break; case 'Y': 
+	break; case ini_symbol: 
 	  {
 	    int i, n = read_int ();
 	    Object str = make_string (n);
@@ -1777,30 +1767,18 @@ read_fasl (void)
 	    PUSH (o3);
             if (nseen < max_seen) vector_set (seen_vector, nseen++, o3);
 	  }
-	break; case 'U':
+	break; case ini_nil:
 	  PUSH (nil);
-	break; case 'I':
+	break; case ini_int:
 	  PUSH (make_fixnum (read_int ()));
-	break; case 'B': 
-	  {			/* simpler to have separate codes for #t/#f */
-	    int c = read_unsigned8 ();
-	    Object b;
-	    if (c == 't')
-	      b = obj_true;
-	    else if (c == 'f')
-	      b = obj_false;
-	    else
-	      vm_error ("Expected a boolean", nil);
-	    PUSH (b);
-	  }
-	break; case 'S':
+	break; case ini_true: 
+          PUSH (obj_true);
+	break; case ini_false: 
+          PUSH (obj_false);
+	break; case ini_string:
 	  PUSH (undump_string ());
-	break; case 'C':
+	break; case ini_char:
 	  PUSH (make_char ((char) read_unsigned8 ()));
-	break; case 'R':
-	  fatal_error ("Can't load doubles yet");
-	  /* FIXME: call to string_to_number here */
-	  /*      PUSH (new Double (undump_string ().toString ())); */
 	}
     }
   if (sp == 1)

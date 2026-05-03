@@ -39,8 +39,8 @@
 	    (cond ((null? vars)
 		   (nesting (+ depth 1) (cdr s)))
 		  ((eq? (car vars) v)
-                   (if (< 255 depth) (%error "Code too complex: nesting too deep"))
-                   (if (< 255 index) (%error "Code too complex: too many locals"))
+                   (if (< 255 depth) (%error "Code too complex: nesting too deep" depth))
+                   (if (< 255 index) (%error "Code too complex: too many locals" index))
 		   (make-lexical-address depth index))
 		  (else
 		   (searching (cdr vars) (+ index 1))))))))
@@ -76,13 +76,13 @@
 
   (define %macroexpanders '())
 
-  (define (%get-macroexpander symbol)
-    (cond ((assq symbol %macroexpanders) => cdr)
-          (else #f)))
-
   (define (%define-macro symbol expander)
     (set! %macroexpanders
           (cons (cons symbol expander) %macroexpanders)))
+
+  (define (%get-macroexpander symbol)
+    (cond ((assq symbol %macroexpanders) => cdr)
+          (else #f)))
 
   (define (%macroexpander form)
     (and (pair? form)
@@ -90,9 +90,14 @@
          (%get-macroexpander (car form))))
 
   (define (%macroexpand-1 form)
-    (cond ((%macroexpander form) => (lambda (expand) (apply expand (cdr form))))
+    (cond ((%macroexpander form) => (lambda (expand)
+                                      (apply expand (cdr form))))
           (else form)))
 
+  (define (%macroexpand-outermost form)
+    (cond ((%macroexpander form) => (lambda (expand)
+                                      (%macroexpand-outermost (apply expand (cdr form)))))
+          (else form)))
 
   ;;;
   ;;; Constants tables
@@ -106,7 +111,7 @@
 	   => cdr)
 	  (else
 	   (let ((c (car constants)))
-             (if (<= 255 c) (%error "Code too complex: too many constants"))
+             (if (<= 255 c) (%error "Code too complex: too many constants" c))
 	     (set-car! constants (+ c 1))
 	     (set-cdr! constants (cons (cons datum c) (cdr constants)))
 	     c))))
@@ -613,38 +618,42 @@
       (define (scan-out-defines sexps def-k body-k)
 	(if (null? sexps) 
 	    (syntax-error "Lambda expression has no body")
-	    (maybe-parse-definition (car sexps)
-	      (lambda (vars1 exps1)
-		(scan-out-defines (cdr sexps)
-		  (lambda (vars exps body) 
-		    (def-k (append vars1 vars) (append exps1 exps) body))
-		  (lambda (body)
-		    (def-k vars1 exps1 body))))
-	      (lambda ()
-		(body-k sexps)))))
+            (maybe-parse-definition (car sexps)
+              (lambda (vars1 exps1)
+                (scan-out-defines (cdr sexps)
+                  (lambda (vars exps body) 
+                    (def-k (append vars1 vars) (append exps1 exps) body))
+                  (lambda (body)
+                    (def-k vars1 exps1 body))))
+              (lambda ()
+                (body-k sexps)))))
 
-      ; If sexp is a definition, return (SUCCEED vars defs) with vars and
+      ; If sexp-0 is a definition, return (SUCCEED vars defs) with vars and
       ; defs as in scan-out-defines; else return (FAIL).
-      (define (maybe-parse-definition sexp succeed fail)
-	(cond
-	  ((not (pair? sexp)) (fail))
-	  ((eq? (car sexp) 'define)
-	   (parse-define sexp succeed))
-	  ((eq? (car sexp) 'begin)
-	   (let loop ((defs (cdr sexp)) (succeed succeed) (fail fail))
-	     (cond
-	       ((null? defs) (succeed '() '()))
-	       ((not (pair? defs)) (fail))
-	       (else
-		(maybe-parse-definition (car defs)
-		  (lambda (vars1 exps1)
-		    (loop (cdr defs)
-		      (lambda (vars exps)
-			(succeed (append vars1 vars) (append exps1 exps)))
-		      (lambda () 
-			(syntax-error "Invalid definition" sexp))))
-		  fail)))))
-	  (else (fail))))
+      ;; TODO macroexpanding here is a hack, because it changes the order
+      ;;  and count of macroexpansions from that of the most straightforward compiler.
+      ;; TODO if we keep using this, then return the expanded sexp in the fail case too.
+      (define (maybe-parse-definition sexp-0 succeed fail)
+        (let ((sexp (%macroexpand-outermost sexp-0)))
+          (cond
+            ((not (pair? sexp)) (fail))
+            ((eq? (car sexp) 'define)
+             (parse-define sexp succeed))
+            ((eq? (car sexp) 'begin)
+             (let loop ((defs (cdr sexp)) (succeed succeed) (fail fail))
+               (cond
+                 ((null? defs) (succeed '() '()))
+                 ((not (pair? defs)) (fail))
+                 (else
+                  (maybe-parse-definition (car defs)
+                    (lambda (vars1 exps1)
+                      (loop (cdr defs)
+                        (lambda (vars exps)
+                          (succeed (append vars1 vars) (append exps1 exps)))
+                        (lambda () 
+                          (syntax-error "Invalid definition" sexp-0))))
+                    fail)))))
+            (else (fail)))))
 
       ; Pre: (and (pair? sexp) (eq? (car sexp) 'define))
       ; Return (K vars defs), where vars and defs are as above.
@@ -785,24 +794,6 @@
     ;; Compile to a top-level procedure with no params, and call it.
     ((%make-closure '#() (parse-form form)))))
 
-
-;;;; Misc macros
-;;;; Of course, these operate in the target system, not in this source file.
-(begin
-
-  (%define-macro '%yo ;; crude printf-debugging convenience
-                 (lambda rands
-                   (if (not (and (pair? rands) (null? (cdr rands))))
-                       (%error "Syntax error" "Requires one operand" `(%yo ,@rands)))
-                   `(let ((v ,(car rands)))
-                      ;; XXX hygiene
-                      (display "[%yo ")
-                      (write ',(car rands))
-                      (display " : ")
-                      (write v)
-                      (display "]\n")
-                      v)))
-  )
 
 ;;;;
 ;;;; globals.scm

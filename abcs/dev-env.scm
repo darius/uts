@@ -1,3 +1,40 @@
+;;;; Misc macros
+(begin
+
+  (%define-macro '%yo ;; crude printf-debugging convenience
+                 (lambda rands
+                   (if (not (and (pair? rands) (null? (cdr rands))))
+                       (%error "Syntax error" "Requires one operand" `(%yo ,@rands)))
+                   `(let ((v ,(car rands)))
+                      ;; XXX hygiene
+                      (display "[%yo ")
+                      (write ',(car rands))
+                      (display " : ")
+                      (write v)
+                      (display "]\n")
+                      v)))
+
+  (%define-macro 'include ;; (include "filename") like (load "filename") but splicing into this context at macroexpansion time
+                 (lambda rands
+                   (if (not (and (pair? rands) (null? (cdr rands))))
+                       (%error "Syntax error" "Requires one operand" `(include ,@rands)))
+                   (let ((filename (car rands)))
+
+                     (define (%read-all filename)
+                       (call-with-input-file filename
+                         (lambda (in)
+                           (let reading ()
+                             (let ((o (read in)))
+	                       (if (eof-object? o)
+                                   '()
+                                   (cons o (reading))))))))
+
+                     (if (not (string? filename))
+                         (%error "Syntax error" "Include filename must be a literal string" filename))
+                     `(begin ,@(%read-all filename)))))
+
+  )
+
 ;;;;
 ;;;; repl.scm
 ;;;;

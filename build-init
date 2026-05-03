@@ -1,0 +1,6 @@
+# Run this with working dir = this dir.
+# The commented-out lines below are just different Scheme systems running the same program -- just pick one.
+
+# guile load-init.scm
+scheme --script load-init.scm
+# uts load-init.scm
