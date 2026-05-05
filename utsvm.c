@@ -2089,7 +2089,8 @@ typedef Object (*callout1_t) (Object);
 typedef Object (*callout2_t) (Object, Object);
 
 #ifdef BYTEOP_PROFILING
-static unsigned byteop_count[24][24];
+enum { nbops = bop_halt + 1 };
+static unsigned byteop_count[nbops][nbops];
 #endif
 
 #ifdef STACK_DEPTH_PROFILING
@@ -2358,8 +2359,8 @@ main (int argc, char **argv)
     if (!out)
       fatal_error (strerror (errno));
 
-    for (i = 0; i < 24; ++i)
-      for (j = 0; j < 24; ++j)
+    for (i = 0; i < nbops; ++i)
+      for (j = 0; j < nbops; ++j)
 	if (byteop_count [i][j] != 0)
 	  fprintf (out, "%2d %2d %10u\n", i, j, byteop_count [i][j]);
 

@@ -168,12 +168,12 @@ break; case bop_invoke:
     bvec = string_ptr (vector_ref (code, 2));
 #ifdef FUNCTION_PROFILING
     {
-      Object c = vector_ref (code, 4);
+      Object c = vector_ref (code, 5); // 5 = codevec slot for call count
       if (is_fixnum (c))
 	{
 	  int count = fixnum_value (c) + 1;
 	  if (int_is_fixnum (count))
-	    vector_set (code, 4, make_fixnum (count));
+	    vector_set (code, 5, make_fixnum (count));
 	  if (count == 2)	/* don't link in until 2nd hit */
 	    set_global_value (
 	      all_entered_code_vectors_symbol,
