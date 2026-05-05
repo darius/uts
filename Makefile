@@ -26,12 +26,14 @@ opcodes.h opcodes.scm: build-instrucs-tables.awk instrucs
 prims.h primcodes.scm: build-prim-codes.awk prims
 	awk -f build-prim-codes.awk prims
 
-# NB init.c must be built by rebuild-fasl; since it's currently a cyclic dependency of utsvm,
-# I'm leaving that step out of this makefile. Same for cleaning init.c below.
+init.c: load-init.scm build-init.scm opcodes.scm primcodes.scm abcs/primitives.scm abcs/read.scm abcs/compiler.scm abcs/dev-env.scm
+	./build-init
+	mv new-init.c init.c
 
 clean:
 	rm -f utsvm
 	rm -f opcodes.h opcodes.scm primcodes.h primcodes.scm
+	rm -f init.c new-init.c
 	rm -f test/tmp[123]
 
 # TODO don't need this wrapper anymore -- rm it once we get rid of the uts.fasl slot in the command line args
