@@ -2337,8 +2337,6 @@ main (int argc, char **argv)
   set_global_value (string_to_symbol (c_string ("%command-line-arguments")),
 		    command_line_arglist (argc, argv));
 
-  if (argc < 2)
-    fatal_error ("usage: utsvm uts.fasl [file.scm] [args]");
   run_fasl ();
 
   /* Reestablish catcher clobbered by run_fasl() */

@@ -15,10 +15,10 @@ else
   CFLAGS = $(BASE_CFLAGS) -g -O2 -DNDEBUG
 endif
 
-all: utsvm
+all: uts
 
-utsvm: utsvm.c config.h opcodes.h prims.h byteops.c init.h init.c
-	$(CC) $(CFLAGS) $(GC_CFLAGS) utsvm.c $(GC_LIBS) -lm -o utsvm
+uts: uts.c config.h opcodes.h prims.h byteops.c init.h init.c
+	$(CC) $(CFLAGS) $(GC_CFLAGS) uts.c $(GC_LIBS) -lm -o uts
 
 opcodes.h opcodes.scm: build-instrucs-tables.awk instrucs
 	awk -f build-instrucs-tables.awk instrucs
@@ -31,19 +31,17 @@ init.c: load-init.scm build-init.scm opcodes.scm primcodes.scm abcs/primitives.s
 	mv new-init.c init.c
 
 clean:
-	rm -f utsvm
+	rm -f uts
 	rm -f opcodes.h opcodes.scm primcodes.h primcodes.scm
 	rm -f init.c new-init.c
 	rm -f test/tmp[123]
 
 # TODO don't need this wrapper anymore -- rm it once we get rid of the uts.fasl slot in the command line args
-install: utsvm uts.fasl
-	mkdir -p $(PREFIX)/lib/uts $(PREFIX)/bin
-	cp utsvm uts.fasl $(PREFIX)/lib/uts/
-	printf '#!/bin/sh\nexec $(PREFIX)/lib/uts/utsvm $(PREFIX)/lib/uts/uts.fasl "$$@"\n' > $(PREFIX)/bin/uts
-	chmod +x $(PREFIX)/bin/uts
+install: uts
+	mkdir -p $(PREFIX)/bin
+	cp uts $(PREFIX)/bin/.
 
 uninstall:
-	rm -rf $(PREFIX)/lib/utsvm $(PREFIX)/bin/uts
+	rm -rf $(PREFIX)/bin/uts
 
 .PHONY: all clean install uninstall

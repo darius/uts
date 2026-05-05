@@ -2,10 +2,13 @@
 *~
 
 # Build artifacts
-uts
-utsvm
-instruc-cases.c
 config.mk
+uts
+init.c
+opcodes.h
+opcodes.scm
+primcodes.scm
+prims.h
 *.o
 *.dSYM/
 uts.fasl.backup
@@ -23,11 +26,21 @@ coverage-results/
 attic/
 corpus-inbox/
 explorations/
+junk/
+later/
+pending/
+tmp/
+refs.text
+
+# Test scratch
+corpus/indent/test-round-trip.tmp
+corpus/miasma/c/asm.h
+corpus/ridarama/expanded/
+test/tmp?
 
 # Claude
 .claude/
 chats/
 
-# Boehm GC (Claude currently keeps it locally)
+# Boehm GC (installed very locally sometimes)
 gc/
-

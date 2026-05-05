@@ -62,8 +62,8 @@
 
   (define %arguments-to-scheme '())
 
-  (define (%start-scheming)  ; called by utsvm once this fasl file is loaded
-    (set! %arguments-to-scheme (cddr %command-line-arguments)) ; skip past the fasl file
+  (define (%start-scheming)  ; called by main() once this init heap is all loaded
+    (set! %arguments-to-scheme (cdr %command-line-arguments)) ; skip past the executable name
     (cond ((pair? %arguments-to-scheme)
            (set! %reset (lambda (_) (%exit 1)))
 	   (load (car %arguments-to-scheme)))
