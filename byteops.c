@@ -125,7 +125,7 @@ break; case bop_rest_params:
 	stack_ptr = frame_ptr;
 	restore_state ();
 	acc = make_fixnum (num_args);
-	error_msg = "Wrong number of arguments";
+	error_msg = "Too few arguments";
 	goto vm_error_label;
       } 
     else 
@@ -154,16 +154,17 @@ break; case bop_restore:
 
 break; case bop_invoke:
   {
+    acc = pop ();
   apply_proc:
-    if (!is_closure (top ())) 
+    if (!is_closure (acc)) 
       {
-	acc = top ();
 	stack_ptr = frame_ptr;
-	goto type_error_label;
+        error_msg = "Call to a non-procedure";
+	goto vm_error_label;
       }
     pc = 0;
-    code = closure_code (top ());
-    lex_env = closure_lex_env (pop ());
+    code = closure_code (acc);
+    lex_env = closure_lex_env (acc);
     constants = vector_ptr (vector_ref (code, 1));
     bvec = string_ptr (vector_ref (code, 2));
 #ifdef FUNCTION_PROFILING
@@ -197,7 +198,7 @@ break; case bop_apply:
 	stack_ptr = frame_ptr;
 	restore_state ();
 	acc = make_fixnum (num_args);
-	error_msg = "Wrong number of arguments";
+	error_msg = "Too few arguments to apply";
 	goto vm_error_label;
       } 
     else
@@ -211,17 +212,19 @@ break; case bop_apply:
 	
 	for (; is_pair (rest); rest = cdr (rest)) 
 	  {
-	    need (2);		/* this accounts for the following push(proc) */
+	    need (1);
 	    push (car (rest));
 	  }
-	push (proc);
 	
 	if (!is_null (rest)) 
 	  {
+            error_msg = "Non-list argument to apply";
+            acc = list;
 	    stack_ptr = frame_ptr;
 	    restore_state ();
-	    vm_type_error (list);
+            goto vm_error_label;
 	  }
+        acc = proc;
 	goto apply_proc;
       }
   }
