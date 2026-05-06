@@ -840,12 +840,18 @@ string_to_symbol (Object str)
 	if (string_equal (str, symbol_to_string (a)))
 	  return a;
       }
-    {	/* FIXME: optimize out this string_copy where you can... */
+    {	// TODO: optimize out this string_copy where you can...
       Object sym = make_symbol (string_copy (str));
       vector_set (symbol_table, i, cons (sym, bucket));
       return sym;
     }
   }
+}
+
+static Object
+c_symbol (const char *s)
+{
+  return string_to_symbol (c_string (s));
 }
 
 static Object
@@ -1294,7 +1300,8 @@ read_atom (FILE *in, int c)
 done:
   *b = '\0';
   {
-    Object s = c_string (buf);	/* this is unfortunate... */
+    Object s = c_string (buf);	// TODO define string_to_number in terms
+                                // of a c_string_to_number not on the heap
     Object n = string_to_number (s, 10);
     return is_true (n) ? n : string_to_symbol (s);
   }
@@ -1967,27 +1974,24 @@ setup (void)
 
   symbol_table = make_vector (101, nil);
 
-  code_vector_symbol = string_to_symbol (c_string ("code-vector"));
-  error_symbol = string_to_symbol (c_string ("%error"));
+  code_vector_symbol = c_symbol ("code-vector");
+  error_symbol = c_symbol ("%error");
 
-  all_entered_code_vectors_symbol = 
-    string_to_symbol (c_string ("%all-entered-code-vectors"));
+  all_entered_code_vectors_symbol = c_symbol ("%all-entered-code-vectors");
   set_global_value (all_entered_code_vectors_symbol, nil);
 
   {
     Object b = make_string (1);
     string_ptr (b) [0] = 22;
     halt_code = 
-      make_code_vector (global_lex_env, b,
-			string_to_symbol (c_string ("halt_code")), nil);
+      make_code_vector (global_lex_env, b, c_symbol ("halt_code"), nil);
   }
 
   {
     Object b = make_string (1);
     string_ptr (b) [0] = 12; // the `invoke` instruction
     just_invoke_code = 
-      make_code_vector (global_lex_env, b,
-			string_to_symbol (c_string ("just_invoke_code")), nil);
+      make_code_vector (global_lex_env, b, c_symbol ("just_invoke_code"), nil);
   }
 
   {
@@ -1995,12 +1999,11 @@ setup (void)
     Object str = make_string (sizeof t46);
     memcpy (string_ptr (str), t46, sizeof t46);
     Object locals_map =
-      cons (cons (string_to_symbol (c_string ("value")), nil),
-            cons (cons (string_to_symbol (c_string ("stack-vector")), nil),
+      cons (cons (c_symbol ("value"), nil),
+            cons (cons (c_symbol ("stack-vector"), nil),
                   nil));
     reified_cont_code = 
-      make_code_vector (global_lex_env, str, 
-			string_to_symbol (c_string ("reified_cont_code")),
+      make_code_vector (global_lex_env, str, c_symbol ("reified_cont_code"),
                         locals_map);
   }    
 }
@@ -2334,7 +2337,7 @@ main (int argc, char **argv)
     unexpected_vm_error ();
   setup ();
 
-  set_global_value (string_to_symbol (c_string ("%command-line-arguments")),
+  set_global_value (c_symbol ("%command-line-arguments"),
 		    command_line_arglist (argc, argv));
 
   run_fasl ();
@@ -2344,7 +2347,7 @@ main (int argc, char **argv)
     unexpected_vm_error ();
 
   { /* Start the main loop if the fasl set one up */
-    Object driver = string_to_symbol (c_string ("%start-scheming"));
+    Object driver = c_symbol ("%start-scheming");
     Object proc = global_value (driver);
     if (is_closure (proc))
       invoke0 (proc);
