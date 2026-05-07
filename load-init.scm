@@ -1,6 +1,8 @@
 (let ()
 
+  ;; Some non-R4RS procedures you may need to customize for your Scheme:
   (define %error error)
+  (define char->ascii char->integer)
 
   (include "opcodes.scm")
   (include "primcodes.scm")
@@ -12,6 +14,7 @@
   ;; you need to test for them before you test for vector type.
 
   ;; -- adaptor just for Chez --
+  ;; TODO not just for Chez anymore; move to build-init.scm and document
   (define closure-tag (list 'closure))
 
   (define (%closure? x)

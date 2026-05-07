@@ -1,7 +1,5 @@
 ;;;; Building a new init image as C byte array literal.
 
-(define char->ascii char->integer)  ;; NB not portable Scheme
-
 (define (another port)
   (display ", " port))
 
