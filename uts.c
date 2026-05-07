@@ -18,6 +18,7 @@
 #include <string.h>
 #include <time.h>
 
+#include "opcodes.h"
 
 static clock_t clock_start;	/* needed by (%runtime) */
 
@@ -1982,22 +1983,26 @@ setup (void)
 
   {
     Object b = make_string (1);
-    string_ptr (b) [0] = 22;
+    string_ptr (b) [0] = bop_halt;
     halt_code = 
       make_code_vector (global_lex_env, b, c_symbol ("halt_code"), nil);
   }
 
   {
     Object b = make_string (1);
-    string_ptr (b) [0] = 12; // the `invoke` instruction
+    string_ptr (b) [0] = bop_invoke;
     just_invoke_code = 
       make_code_vector (global_lex_env, b, c_symbol ("just_invoke_code"), nil);
   }
 
   {
-    unsigned char t46[] = { 9, 1, 1, 1, 0, 16, 1, 0, 0, 11 };
-    Object str = make_string (sizeof t46);
-    memcpy (string_ptr (str), t46, sizeof t46);
+    unsigned char bopcode[] = { bop_params, 1,
+                                bop_varref, 1, 0,
+                                bop_set_cc,
+                                bop_varref, 0, 0,
+                                bop_restore };
+    Object str = make_string (sizeof bopcode);
+    memcpy (string_ptr (str), bopcode, sizeof bopcode);
     Object locals_map =
       cons (cons (c_symbol ("value"), nil),
             cons (cons (c_symbol ("stack-vector"), nil),
@@ -2116,7 +2121,7 @@ enter_interpreter (Interpreter *interp)
   Object *constants;
   const unsigned char *bvec;
   
-  unsigned char byteop = 22;
+  unsigned char byteop = bop_halt;
 
 #ifdef BYTEOP_PROFILING
   unsigned char previous_byteop;
@@ -2156,7 +2161,7 @@ enter_interpreter (Interpreter *interp)
 	default: 
 	bad_opcode_label:
           error_msg = "Bad opcode";
-	  acc = nil;
+	  acc = make_fixnum (byteop);
 	  goto vm_error_label;
 
 	unbound_error_label:
@@ -2196,7 +2201,6 @@ enter_interpreter (Interpreter *interp)
 
 #define vm_check_type(f,x)  do { if (!(f)) vm_type_error (x); } while (0)
 
-#include "opcodes.h"
 #include "prims.h"
 #include "byteops.c"
 

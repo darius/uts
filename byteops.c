@@ -89,59 +89,74 @@ break; case bop_proc:
 break; case bop_params:
   {
     unsigned num_formals = get_byte ();
-
-    if (stack_ptr - frame_ptr != num_formals) /* assumes stack grows upward */
+    int num_args = stack_ptr - frame_ptr; /* assumes stack grows upward */
+    if (num_args != num_formals)
       { 
-	/* need to be able to have > 1 errobj:
-	   fprintf (stderr, "wna %d, should be %d\n", 
-	            stack_ptr - frame_ptr, num_formals);
-         */
-	int num_args = stack_ptr - frame_ptr;
-	stack_ptr = frame_ptr;
-	restore_state ();
-	acc = make_fixnum (num_args);
-	error_msg = "Wrong number of arguments";
-	goto vm_error_label;
+        Object arguments = nil;
+        while (frame_ptr < stack_ptr)
+          arguments = cons (pop (), arguments);
+        // Now the stack state is popped back to the continuation.
+        // Cons an informative irritant:
+        // want: (calling: #<procedure h> nargs: 1 required-nargs: 2 arguments: (1) called-from: #<procedure g> byte-offset: 42) but we don't have all that info anymore
+        acc = cons (c_symbol ("nargs:"),
+                    cons (make_fixnum (num_args),
+                          cons (c_symbol ("required-nargs:"),
+                                cons (make_fixnum (num_formals),
+                                      cons (c_symbol ("arguments:"),
+                                            cons (arguments,
+                                                  nil))))));
+        restore_state ();
+        error_msg = "Wrong number of arguments";
+        goto vm_error_label;
       } 
     else 
       {
-	unsigned i;
-	Object new_lex_env = allot_vector (1 + num_formals);
-	vector_set (new_lex_env, 0, lex_env);
-	for (i = num_formals; i != 0; --i)
-	  vector_set (new_lex_env, i, pop ());
-	lex_env = new_lex_env;
+        unsigned i;
+        Object new_lex_env = allot_vector (1 + num_formals);
+        vector_set (new_lex_env, 0, lex_env);
+        for (i = num_formals; i != 0; --i)
+          vector_set (new_lex_env, i, pop ());
+        lex_env = new_lex_env;
       }
   }
 
 break; case bop_rest_params:
   {
     unsigned min_num_args = get_byte ();
-    unsigned actuals = stack_ptr - frame_ptr;
-    if (actuals < min_num_args) 
+    unsigned num_args = stack_ptr - frame_ptr;
+    if (num_args < min_num_args) 
       {
-      /*fprintf (stderr, "wna %d, should be >= %d\n", actuals, min_num_args); */
-	int num_args = stack_ptr - frame_ptr;
-	stack_ptr = frame_ptr;
-	restore_state ();
-	acc = make_fixnum (num_args);
-	error_msg = "Too few arguments";
-	goto vm_error_label;
+        Object arguments = nil;
+        while (frame_ptr < stack_ptr)
+          arguments = cons (pop (), arguments);
+        // Now the stack state is popped back to the continuation.
+        // Cons an informative irritant:
+        // want: (calling: #<procedure h> nargs: 1 min-nargs: 2 arguments: (1) called-from: #<procedure g> byte-offset: 42) but we don't have all that info anymore
+        acc = cons (c_symbol ("nargs:"),
+                    cons (make_fixnum (num_args),
+                          cons (c_symbol ("min-nargs:"),
+                                cons (make_fixnum (min_num_args),
+                                      cons (c_symbol ("arguments:"),
+                                            cons (arguments,
+                                                  nil))))));
+        restore_state ();
+        error_msg = "Too few arguments";
+        goto vm_error_label;
       } 
     else 
       {
-	Object new_lex_env = allot_vector (1 + 1 + min_num_args);
-	vector_set (new_lex_env, 0, lex_env);
-	{
-	  unsigned i;
-	  Object rest_args = nil;
-	  for (i = actuals - min_num_args; i != 0; --i)
-	    rest_args = cons (pop (), rest_args);
-	  vector_set (new_lex_env, 1 + min_num_args, rest_args);
-	  for (i = min_num_args; i != 0; --i)
-	    vector_set (new_lex_env, i, pop ());
-	  lex_env = new_lex_env;
-	}
+        Object new_lex_env = allot_vector (1 + 1 + min_num_args);
+        vector_set (new_lex_env, 0, lex_env);
+        {
+          unsigned i;
+          Object rest_args = nil;
+          for (i = num_args - min_num_args; i != 0; --i)
+            rest_args = cons (pop (), rest_args);
+          vector_set (new_lex_env, 1 + min_num_args, rest_args);
+          for (i = min_num_args; i != 0; --i)
+            vector_set (new_lex_env, i, pop ());
+          lex_env = new_lex_env;
+        }
       }
   }
 
@@ -158,7 +173,19 @@ break; case bop_invoke:
   apply_proc:
     if (!is_closure (acc)) 
       {
-	stack_ptr = frame_ptr;
+        // Put the arguments in a list for the irritant:
+        Object arguments = nil;
+        while (frame_ptr < stack_ptr)
+	  arguments = cons (pop (), arguments);
+        // TODO make a function to listify like that
+        // Now the stack state is popped back to the continuation.
+        // Cons an informative irritant:
+        acc = cons (c_symbol ("calling:"),
+                    cons (acc,
+                          cons (c_symbol ("arguments:"),
+                                cons (arguments,
+                                      nil))));
+        // Raise the error:
         error_msg = "Call to a non-procedure";
 	goto vm_error_label;
       }
@@ -195,37 +222,40 @@ break; case bop_apply:
     int num_args = stack_ptr - frame_ptr;  /* assumes stack grows upward */
     if (num_args < 2) 
       { 
-	stack_ptr = frame_ptr;
-	restore_state ();
-	acc = make_fixnum (num_args);
-	error_msg = "Too few arguments to apply";
-	goto vm_error_label;
+        // Put the arguments in a list as the irritant:
+        acc = nil;
+        while (frame_ptr < stack_ptr)
+          acc = cons (pop (), acc);
+        // Now the stack state is popped back to the continuation.	
+        restore_state (); // XXX why did I write restore_state() here, but not in the corresponding code for bop_invoke?
+        acc = cons (c_symbol ("arguments:"), cons (acc, nil));
+        error_msg = "Too few arguments to apply";
+        goto vm_error_label;
       } 
     else
       {
-	Object list = top (), rest = list;
-	Object proc = stack [frame_ptr];
-	int i;
-	for (i = frame_ptr; i < stack_ptr - 2; ++i)
-	  stack [i] = stack [i+1];
-	stack_ptr = i;
-	
-	for (; is_pair (rest); rest = cdr (rest)) 
-	  {
-	    need (1);
-	    push (car (rest));
-	  }
-	
-	if (!is_null (rest)) 
-	  {
+        Object list = top (), rest = list;
+        Object proc = stack [frame_ptr];
+        int i;
+        for (i = frame_ptr; i < stack_ptr - 2; ++i)
+          stack [i] = stack [i+1];
+        stack_ptr = i;
+        for (; is_pair (rest); rest = cdr (rest)) 
+          {
+            need (1);
+            push (car (rest));
+          }
+
+        if (!is_null (rest)) 
+          {
             error_msg = "Non-list argument to apply";
             acc = list;
-	    stack_ptr = frame_ptr;
-	    restore_state ();
+            stack_ptr = frame_ptr;
+            restore_state ();
             goto vm_error_label;
-	  }
+          }
         acc = proc;
-	goto apply_proc;
+        goto apply_proc;
       }
   }
 
