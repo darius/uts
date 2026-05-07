@@ -1865,24 +1865,6 @@ prim_flush_input_line (Object x0)
 }
 
 static Object
-prim_read_fasl_header (Object x0)
-{
-  check_type (is_input_port (x0), x0);
-  check_openness (x0);
-  // XXX this is a no-op now, rm me
-  return unspecified;
-}
-
-static Object
-prim_read_fasl (Object x0)
-{
-  check_type (is_input_port (x0), x0);
-  check_openness (x0);
-  // XXX this is unwanted now, rm me
-  return read_fasl ();
-}
-
-static Object
 expt (Object x1, Object x0)
 {
   if (is_fixnum (x1) && is_fixnum (x0)) {

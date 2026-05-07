@@ -60,8 +60,6 @@
 1 length
 1 %skip-blanks
 1 %flush-input-line
-1 %read-fasl-header
-1 %read-fasl
 1 %exit
 1 peek-char
 1 read-char

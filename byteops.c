@@ -529,12 +529,6 @@ break; case bop_prim_1:
     break; case p1_flush_input_line:
         { callout1 (prim_flush_input_line); }
 
-    break; case p1_read_fasl_header:
-        { callout1 (prim_read_fasl_header); }
-
-    break; case p1_read_fasl:
-        { callout1 (prim_read_fasl); }
-
     break; case p1_exit:
         { vm_check_type (is_fixnum (x0), x0);
             exit (fixnum_value (x0)); }
