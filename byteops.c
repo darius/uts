@@ -102,9 +102,11 @@ break; case bop_params:
                     cons (make_fixnum (num_args),
                           cons (c_symbol ("required-nargs:"),
                                 cons (make_fixnum (num_formals),
-                                      cons (c_symbol ("arguments:"),
-                                            cons (arguments,
-                                                  nil))))));
+                                      cons (c_symbol ("callee:"),
+                                            cons (make_closure (lex_env, code), // TODO sucks that we have no handle on the original closure object at this point
+                                                  cons (c_symbol ("arguments:"),
+                                                        cons (arguments,
+                                                              nil))))))));
         restore_state ();
         error_msg = "Wrong number of arguments";
         goto vm_error_label;
@@ -136,9 +138,11 @@ break; case bop_rest_params:
                     cons (make_fixnum (num_args),
                           cons (c_symbol ("min-nargs:"),
                                 cons (make_fixnum (min_num_args),
-                                      cons (c_symbol ("arguments:"),
-                                            cons (arguments,
-                                                  nil))))));
+                                      cons (c_symbol ("callee:"),
+                                            cons (make_closure (lex_env, code),
+                                                  cons (c_symbol ("arguments:"),
+                                                        cons (arguments,
+                                                              nil))))))));
         restore_state ();
         error_msg = "Too few arguments";
         goto vm_error_label;
