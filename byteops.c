@@ -694,9 +694,6 @@ break; case bop_prim_2:
       break; case p2_read_atom:
           { callout2 (prim_read_atom); }
 
-      break; case p2_display_string:
-          { goto bad_opcode_label; }
-
       break; case p2_write_char:
           { vm_check_type (is_char (x1), x1);
               vm_check_type (is_output_port (x0), x0);

@@ -87,7 +87,6 @@
 2 char<=?
 2 char=?
 2 %read-atom
-2 %display-string
 2 write-char
 2 +
 2 -

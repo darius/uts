@@ -2141,7 +2141,6 @@ enter_interpreter (Interpreter *interp)
 	{
 
 	default: 
-	bad_opcode_label:
           error_msg = "Bad opcode";
 	  acc = make_fixnum (byteop);
 	  goto vm_error_label;
