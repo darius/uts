@@ -92,4 +92,7 @@ See [Guide.md](Guide.md).
 
 ## Why care?
 
-Beats me! It's pretty small, at least. 
+Beats me! At least it's pretty small. There's a little more motivation
+in the [original README](README.old.text). Goal for the overhaul: to
+be nicer to read, and maybe handy as a tractable personal programming
+environment.
