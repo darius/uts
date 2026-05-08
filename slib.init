@@ -32,15 +32,15 @@
 ;;; page; or false if there isn't one.
 
 (define (scheme-implementation-home-page)
-  "http://www.accesscom.com/~darius")
+  "https://github.com/darius/uts")
 
 ;;; (scheme-implementation-version) should return a string describing
 ;;; the version the scheme implementation loading this file.
 
-(define (scheme-implementation-version) "0.14")
+(define (scheme-implementation-version) "0.15pre")
 
 (define (getenv . args) #f)
-(define system @system)
+(define system %system)
 (define (identity x) x)
 
 ;;; (implementation-vicinity) should be defined to be the pathname of
@@ -106,7 +106,7 @@
 	multiarg/and-			;/ and - can take more than 2 args.
 	multiarg-apply			;APPLY can take more than 2 args.
 ;	rationalize
-;	delay				;has DELAY and FORCE
+	delay				;has DELAY and FORCE
 ;	with-file			;has WITH-INPUT-FROM-FILE and
 					;WITH-OUTPUT-FROM-FILE
 ;	string-port			;has CALL-WITH-INPUT-STRING and
@@ -177,7 +177,7 @@
 
 ;;; If your implementation provides eval SLIB:EVAL is single argument
 ;;; eval using the top-level (user) environment.
-(define slib:eval @eval)
+(define slib:eval %eval)
 
 ;;; If your implementation provides R4RS macros:
 ;(define macro:eval slib:eval)
@@ -239,7 +239,7 @@
       (for-each (lambda (x) (display x port)) args))))
 
 ;;; define an error procedure for the library
-(define slib:error @error)
+(define slib:error %error)
 
 ;;; define these as appropriate for your system.
 (define slib:tab (integer->char 9))
@@ -258,7 +258,7 @@
 ;;; return if exitting not supported.
 (define slib:exit 
   (lambda args
-    (@exit (if (null? args) 0 (car args)))))
+    (%exit (if (null? args) 0 (car args)))))
 
 ;;; Here for backward compatability
 (define scheme-file-suffix

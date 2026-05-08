@@ -1,13 +1,48 @@
 # UTS User Guide
 
-This guide documents non-standard extensions provided by UTS. Standard R4RS procedures are not covered here.
+This guide assumes you know [R4RS][1], and covers the particulars of `uts`.
 
-## Naming Convention
+ [1]: https://standards.scheme.org/official/r4rs.pdf
 
-- Standard R4RS procedures use plain names: `car`, `map`, `call-with-current-continuation`
-- Non-standard definitions use `%` prefix: `%error`, `%system`
+## OS command line
 
-## Error Handling
+If you run `uts` with no arguments, it enters a read-eval-print loop
+(REPL) -- see Quick Start in README.md.
+
+If instead you run `uts filename.scm`, it loads and runs the Scheme
+source from `filename.scm`. If an error occurs, it prints the
+complaint and exits to the OS with status 1.
+
+Any further command-line arguments are just made available to your
+Scheme code (see `%command-line-arguments` below).
+
+## Differences from R4RS
+
+Symbols and identifiers are case sensitive: `(eq? 'foo 'FOO)` is
+false. Other Schemes like Chez and Guile make the same choice, though
+R4RS contradicts it: it says "For example, Foo is the same identifier as FOO."
+
+## R4RS nonessential features omitted
+
+Omitted numeric types: big integers (over 60 bits), rational numbers, complex numbers.
+
+Their associated procedures:
+- `numerator`, `denominator, `rationalize
+- `make-rectangular`, `make-polar`, `real-part`, `imag-part`, `magnitude`, `angle`
+
+Other nonessentials omitted:
+- `with-input-from-file`, `with-output-to-file`
+- `char-ready?`
+- `transcript-on`, `transcript-off`
+- the macro appendix
+
+## Naming convention
+
+Non-standard definitions should use a `%` prefix: `%error`, `%system`.
+
+Some undocumented internals violate this convention. (XXX fixme)
+
+## Error handling
 
 ### `(%error message . irritants)` / `(error message . irritants)`
 
@@ -26,6 +61,19 @@ What to do after `%error` complains to the user:
 - If a command-line script was running, then exit the OS process with status 1 (meaning error).
 - If the initial heap was still being built, then say so and panic (also an OS error status 1).
 
+## Debugging
+
+TODO proper documentation
+
+From the REPL after an error:
+
+```scheme
+(%debug)              ; Enter the debugger
+(%disassemble proc)   ; Disassemble a procedure
+```
+
+Debugger commands: `?` help, `b` backtrace, `u`/`d` up/down frames, `e` show environment, `q` quit.
+
 ### `(%proceed value)`
 
 Continue from the last error, returning `value` as the result of the expression that signaled the error.
@@ -39,6 +87,12 @@ not-a-pair
 43
 ```
 
+## Macros
+
+You can define macros using `%define-macro`, though it's very
+crude. See the system sources for examples and how it works. (Common
+Lisp `defmacro` would be a natural next step if you like macros.)
+
 ## System Interface
 
 ### `%command-line-arguments`
@@ -47,7 +101,7 @@ A list of command-line arguments passed to UTS. The first element is the UTS exe
 
 ```scheme
 -> %command-line-arguments
-("uts.fasl" "-f" "program.scm" "arg1")
+("uts" "program.scm" "arg1")
 ```
 
 ### `%arguments-to-scheme`
@@ -85,17 +139,11 @@ Returns the elapsed CPU time in seconds since the interpreter started (as a flon
 
 ### `(%eval expression)`
 
-Compile and evaluate an expression. This is the internal evaluator used by the REPL.
+Evaluate an expression in the global environment. This is the internal evaluator used by the REPL.
 
 ```scheme
 (%eval '(+ 1 2))  ; => 3
 ```
-
-## Misc Utilities
-
-### `(%flush-input-line port)`
-
-Discard characters until end of line. Useful for recovering from parse errors in interactive use.
 
 ## Bitwise Operations
 
@@ -109,13 +157,9 @@ These follow SRFI-60 naming (not prefixed with `%` since they're widely standard
 
 All operate on fixnums only. They don't raise an error on overflow. XXX arithmetic-shift should
 
-## Debugging
+## Misc utilities
 
-From the REPL after an error:
+### `(%flush-input-line port)`
 
-```scheme
-(debug)      ; Enter the debugger
-(dis proc)   ; Disassemble a procedure
-```
+Discard characters until end of line. Useful for recovering from parse errors in interactive use.
 
-Debugger commands: `?` help, `b` backtrace, `u`/`d` up/down frames, `e` show environment, `q` quit.
