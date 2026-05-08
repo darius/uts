@@ -21,13 +21,12 @@ dependency is on my agenda).
  [1]: https://www.hboehm.info/gc/
 
 You'll need a standard Scheme preinstalled to bootstrap the bytecode
-compiler into C. If you have Chez Scheme, it should just work. Else
-edit `build-init` to specify the Scheme executable (there's a
-commented-out line for Guile, the other Scheme I've tested). You may
-need to also edit the top of `load-init.scm` to supply a few
-nonportable Scheme functions. Chez and Guile have a nonstandard Scheme
-function `include` which this bootstrap depends on; `(define include
-load)` might work on other Schemes, but I haven't tried that.
+compiler into C. Chez Scheme or Guile should just work. For another
+Scheme, edit `build-init` to give the executable name. You may need to
+also edit the top of `load-init.scm` to supply a few nonportable
+Scheme functions. Chez and Guile have a nonstandard Scheme function
+`include` which this bootstrap depends on; `(define include load)`
+might work on other Schemes, but I haven't tried that.
 
 The C code currently assumes 64 bits and a few other things more
 modern than the 90s original. Will document/improve later.
@@ -38,7 +37,7 @@ Given these dependencies, do
 `./configure && make && make install`.
 
 There are some tests once it's built:
-`./run-tests && test/run-tests && ./run-bench && corpus/run-corpus`.
+`make test && ./run-bench && corpus/run-corpus`.
 
 If this fails, `make DEBUG=1` may be more tractable to debug (but runs
 much slower).

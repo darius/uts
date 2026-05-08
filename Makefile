@@ -26,9 +26,13 @@ opcodes.h opcodes.scm: build-instrucs-tables.awk instrucs
 prims.h primcodes.scm: build-prim-codes.awk prims
 	awk -f build-prim-codes.awk prims
 
-init.c: load-init.scm build-init.scm opcodes.scm primcodes.scm abcs/primitives.scm abcs/read.scm abcs/compiler.scm abcs/dev-env.scm
+init.c: build-init load-init.scm build-init.scm opcodes.scm primcodes.scm abcs/primitives.scm abcs/read.scm abcs/compiler.scm abcs/dev-env.scm
 	./build-init
 	mv new-init.c init.c
+
+test:
+	./run-tests
+	test/run-tests
 
 clean:
 	rm -f uts
@@ -44,4 +48,4 @@ install: uts
 uninstall:
 	rm -rf $(PREFIX)/bin/uts
 
-.PHONY: all clean install uninstall
+.PHONY: all test clean install uninstall

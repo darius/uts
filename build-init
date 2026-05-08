@@ -1,10 +1,19 @@
 # Run this with working dir = this dir.
-# The commented-out lines below are just different Scheme systems running the same program -- just pick one.
 
-# guile load-init.scm
-scheme --script load-init.scm
-# uts load-init.scm
+# Select the Scheme system to use for bootstrapping.
+if   [ -n "${BOOTSCHEME+x}" ];     then true # just use the already-set BOOTSCHEME
+elif command -v scheme >/dev/null; then BOOTSCHEME='scheme --script'   # Chez Scheme
+elif command -v guile >/dev/null;  then BOOTSCHEME=guile
+elif command -v ./uts >/dev/null;  then BOOTSCHEME=./uts
+else
+   echo 'Install a Scheme system for bootstrapping, and edit build-init to use it.' >/dev/stderr
+   exit 1
+fi
 
-# Afterwards, new-init.c has the new version of init.c. Currently you have to do the rest by hand:
+# Bootstrap new-init.c.
+$BOOTSCHEME load-init.scm
+
+# Afterwards, new-init.c has the new version of init.c.
+# The Makefile does the rest, or you can run these yourself:
 # mv new-init.c init.c
 # make && ./run-tests && test/run-tests && ./run-bench && corpus/run-corpus
