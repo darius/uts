@@ -13,7 +13,7 @@
   "Returns #t if thunk signals an error, #f otherwise."
   (call-with-current-continuation
     (lambda (escape)
-      (set! %reset (lambda (x)
+      (set! %reset (lambda ()
                      (set! %reset saved-reset)
                      (escape #t)))
       (thunk)

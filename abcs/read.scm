@@ -77,7 +77,7 @@
       (set! %error-cont #f)
       (%complain "Read error" message irritants)
       (%flush-input-line port)
-      (%reset '*))
+      (%reset))
     
 
     ;; White space

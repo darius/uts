@@ -46,14 +46,16 @@ Some undocumented internals violate this convention. (XXX fixme)
 
 ### `(%error message . irritants)` / `(error message . irritants)`
 
-Signal an error. Displays the message and any irritant values, then calls `%reset`. The `error` name is provided as a SRFI-23 compatible alias.
+Signal an error. Displays the message and any irritant values, then
+calls `%reset`. The `error` name is provided as a SRFI-23 compatible
+alias.
 
 ```scheme
 (%error "file not found" filename)
 (error "expected a number" x)  ; same thing
 ```
 
-### `(%reset ignored-value)`
+### `(%reset)`
 
 What to do after `%error` complains to the user:
 

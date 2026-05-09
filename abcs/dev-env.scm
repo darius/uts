@@ -81,8 +81,13 @@
 
   ;; Read-eval-print loop.
 
-  (define %reset                ; (this definition will be reassigned)
+  (define (%reset)
+    (%reset-cont 'ignored))
+
+  (define %reset-cont ; (this definition gets reassigned after startup)
     (lambda (val)
+      ;; We only get here when startup is borked somehow, so this is coded to
+      ;; rely on the runtime as minimally as we can. Just inlined primitives.
       (display "*** ERROR DURING STARTUP." (current-output-port))
       (newline (current-output-port))
       (%exit 1)))
@@ -92,11 +97,11 @@
   (define (%start-scheming)  ; called by main() once this init heap is all loaded
     (set! %arguments-to-scheme (cdr %command-line-arguments)) ; skip past the executable name
     (cond ((pair? %arguments-to-scheme)
-           (set! %reset (lambda (_) (%exit 1)))
+           (set! %reset-cont (lambda (_) (%exit 1)))
 	   (load (car %arguments-to-scheme)))
           (else
            (display "Enter an expression. On an error, enter ,d to debug. For more commands: ,help\n")
-	   (call/cc (lambda (k) (set! %reset k)))
+	   (call/cc (lambda (k) (set! %reset-cont k)))
            (%scheming))))
 
   (define (%scheming)  ; read-eval-print loop
@@ -163,7 +168,7 @@
       (lambda (cont)
 	(set! %error-cont cont)
 	(%complain "Error" message irritants)
-	(%reset '*))))
+	(%reset))))
 
   (define %error-cont '*)
 
