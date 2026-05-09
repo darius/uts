@@ -24,12 +24,12 @@ At the prompt you can of course enter an expression and see its value:
 5
 ```
 
-TODO document features:
+TODO document REPL features:
 - ,commands
 - ctrl-d to exit
 - %, %%, %%% recent history
 - `cycle-write`
-- when value is 'unspecified', it's not written
+- when value is `%void`, it's not written
 
 
 ## Differences from R4RS

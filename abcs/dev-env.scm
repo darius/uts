@@ -99,7 +99,7 @@
                 (else
                  ;; An expression
 	         (let ((obj (%eval cmd)))
-                   (cond ((not (eq? obj unspecified))
+                   (cond ((not (eq? obj %void))
                           (set! %%% %%)
                           (set! %% %)
                           (set! % obj)
@@ -141,9 +141,9 @@
 	    result)))
 
   ;; Output history (with a short memory)
-  (define % unspecified)
-  (define %% unspecified)
-  (define %%% unspecified)
+  (define % %void)
+  (define %% %void)
+  (define %%% %void)
 
   (define (%error message . irritants)
     (call/cc
@@ -547,7 +547,7 @@
               args)
     (call/cc (lambda (cont)
                (%inspect-cont cont)
-               (if (null? args) unspecified (car args)))))
+               (if (null? args) %void (car args)))))
 
   (define (%inspect-cont cont)
 
@@ -588,7 +588,7 @@
 	 (again))
 
 	((q quit)
-         unspecified)
+         %void)
 
 	((u up)
 	 (let ((caller (frame->caller frame)))

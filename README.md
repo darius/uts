@@ -39,7 +39,7 @@ Given these dependencies, do
 There are some tests once it's built:
 `make test && ./run-bench && corpus/run-corpus`.
 
-If this fails, `make DEBUG=1` may be more tractable to debug (but runs
+If the testing fails, `make DEBUG=1` may be more tractable to debug (but runs
 much slower).
 
 

@@ -2,7 +2,7 @@
 ;;;; More miscellany
 ;;;;
 
-(define unspecified (string->symbol "#!unspecified"))
+(define %void (string->symbol "#!%void"))
 
 (define (%reduce fn id lst)
   (let loop ((lst lst))
@@ -275,7 +275,7 @@
 		  (let ((consequent (cadr rands))
 			(alternative (if (= num-rands 3) 
 					 (caddr rands) 
-					 `',unspecified)))
+					 `',%void)))
 		    (pe (car rands)
 			(if (eq? k lap/restore)
 			    (let ((e (pe alternative k)))
@@ -371,7 +371,7 @@
 
 		 ((begin)
 		  (if (null? rands)
-		      (lap/lit unspecified constants k)
+		      (lap/lit %void constants k)
 		      (let loop ((head (car rands)) (tail (cdr rands)))
 			(pe head
 			    (if (null? tail)
@@ -410,7 +410,7 @@
 		 ((cond)
 		  (pe
 		   (cond
-		     ((null? rands) `',unspecified)
+		     ((null? rands) `',%void)
 		     ((not (pair? (car rands)))
 		      (syntax-error "Invalid cond clause" (car rands)))
 		     ((eq? (caar rands) 'else)

@@ -162,8 +162,6 @@ tag (Object obj)            { return object_header (obj).tag; }
 #define obj_false        ( (Object) 0x0000000b )
 #define obj_true         ( (Object) 0x0000002b )
 
-#define unspecified      obj_false
-
 fast Flag is_eof_object (Object obj) { return obj == obj_eof; }
 fast Flag is_null (Object obj)       { return obj == nil; }
 fast Flag is_unbound (Object obj)    { return obj == unbound; }
@@ -442,6 +440,7 @@ open_file (Object filename, Tag tag, const char *mode)
 }
   
 
+static Object void_marker;
 static Object current_input_port, current_output_port;
 static Object halt_code, just_invoke_code, reified_cont_code;
 static Object code_vector_symbol;
@@ -1815,7 +1814,7 @@ close_input_port (Object x0)
 {
   check_type (is_input_port (x0), x0);
   close_port (x0);
-  return unspecified;
+  return void_marker;
 }
 
 static Object
@@ -1823,7 +1822,7 @@ close_output_port (Object x0)
 {
   check_type (is_output_port (x0), x0);
   close_port (x0);
-  return unspecified;
+  return void_marker;
 }
 
 static Object
@@ -1852,7 +1851,7 @@ prim_skip_blanks (Object x0)
   check_type (is_input_port (x0), x0);
   check_openness (x0);
   skip_blanks (port_file (x0));
-  return unspecified;
+  return void_marker;
 }
 
 static Object
@@ -1861,7 +1860,7 @@ prim_flush_input_line (Object x0)
   check_type (is_input_port (x0), x0);
   check_openness (x0);
   flush_input_line (port_file (x0));
-  return unspecified;
+  return void_marker;
 }
 
 static Object
@@ -1911,7 +1910,7 @@ prim_write (Object x1, Object x0)
     if (0 != fflush (fp))
       io_error (errno);
   }
-  return unspecified;
+  return void_marker;
 }
 
 static Object
@@ -1925,7 +1924,7 @@ prim_display (Object x1, Object x0)
     if (0 != fflush (fp))
       io_error (errno);
   }
-  return unspecified;
+  return void_marker;
 }
 
 static Object
@@ -1950,12 +1949,13 @@ static Object all_entered_code_vectors_symbol;
 static void 
 setup (void)
 {
+  symbol_table = make_vector (101, nil);
+  void_marker = c_symbol ("#!%void");
+
   current_input_port = make_port (an_input_port, stdin);
   current_output_port = make_port (an_output_port, stdout);
 
   global_lex_env = allot_vector (0);
-
-  symbol_table = make_vector (101, nil);
 
   code_vector_symbol = c_symbol ("code-vector");
   error_symbol = c_symbol ("%error");
