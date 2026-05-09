@@ -19,7 +19,7 @@ make
 make DEBUG=1
 
 # Clean and rebuild
-rm -f uts instruc-cases.c && make
+make clean
 
 # Install to /usr/local (or prefix set by configure)
 make install
@@ -30,6 +30,7 @@ make install
 - **Boehm GC**: Required. The `configure` script auto-detects it from: local `gc/` subdirectory, pkg-config, or common prefixes (/usr/local, /opt/homebrew, /usr)
 - **GCC**: Required for `inline` functions and 64-bit `long long int` support
 - **AWK**: Required to generate `instruc-cases.c` from `instrucs.c`
+- A Scheme system to bootstrap from. Choices known to work are Chez Scheme, Guile, and (if you have a prebuilt binary) UTS itself.
 
 ## Running
 
@@ -38,31 +39,39 @@ make install
 ./uts
 
 # Run a Scheme file
-./uts -f program.scm arg1 arg2
+./uts program.scm arg1 arg2
 ```
 
-## Bootstrap / Rebuilding uts.fasl
+## Bootstrap: compiling the compiler from Scheme to C
 
-UTS is partly in Scheme; this part, `uts.scm`, must be compiled into `uts.fasl` which is loaded at startup. It is needed to compile itself - it's a bootstrap dependency. When making changes that affect both `utsvm.c` and `uts.scm`:
+UTS is partly in Scheme, notably the reader and the bytecode compiler
+themselves. This Scheme code needs to be precompiled into a C literal
+array representing the initial heap (`init.c`). The Makefile takes
+care of this.
 
-1. **Simple changes**: Just rebuild fasl with ./rebuild-fasl
+Some C and Scheme source files get generated from two data files:
+-`instrucs` lists the bytecode instructions (byteops)
+- `prims` lists the primitive procedures
 
-2. **Changes to primitive names or C/Scheme interface**:
-   - Keep old fasl working first (support both old and new names)
-   - Rebuild fasl while old names still work
-   - Then switch C to new names and rebuild C
-   - Rebuild fasl again with new prim-lists: follow the same process as rebuild-fasl does, but load uts.scm first to get updated prim-lists
-
-3. **If fasl becomes broken**: Restore from git with `git checkout HEAD -- uts.fasl`, or maybe make a backup file before attempting an iffy change
+The rest of the Scheme source to be precompiled into `init.c` is in
+`abcs/*.scm`. The boot Scheme (Chez by default) loads
+`abcs/compiler.scm` and calls this code to compile the source files
+into `init.c`; so the text of `compiler.scm` is processed twice:
+loaded into the boot Scheme, then read and compiled by itself under
+the boot Scheme. So the Scheme dialect it's coded in must be supported
+by both. (TODO maybe worth elaborating)
 
 ## Architecture
 
 ### Core Components
 
-- **utsvm.c**: Main C interpreter with bytecode VM, object representation, reader/writer, and garbage collection interface
-- **instrucs.c**: Bytecode instruction implementations (processed by `make-instrucs.awk` into `instruc-cases.c`)
-- **uts.scm**: Complete Scheme runtime - standard library, compiler, REPL, debugger, and disassembler (all in one file)
+- **uts.c**: Main C interpreter with bytecode VM, object representation, reader/writer, and garbage collection interface
+- **byteops.c**: a case for each byteop, #included in `uts.c`.
 - **config.h**: Platform-specific configuration (word sizes, stack limits)
+- **abcs/primitives.scm**: the R4RS primitive procedures that aren't in C.
+- **abcs/read.scm**: `read` is big enough to get its own file.
+- **abcs/compiler.scm**: compiles s-expressions to bytecode.
+- **abcs/dev-env.scm**: the REPL, debugger, etc.
 
 ### Object Representation
 
@@ -75,16 +84,18 @@ Boxed objects have a header with size and 3-bit tag.
 
 ### Bytecode VM
 
-23 instructions total. Key opcodes:
-- `lit`, `varref`, `varset`, `global-ref/set/define`
-- `if-false`, `jump`, `save`, `restore`, `invoke`, `apply`
-- `proc`, `extend-normal-env`, `extend-&rest-env`
-- `prim-0/1/2/3` (primitive calls with 0-3 args)
-- `get-cc`, `set-cc` (continuations)
+Stack machine with 22 instructions designed for Scheme
+only.
 
-Continuation stack frames store: return PC, code vector, lexical environment, previous frame pointer.
+Environments are linked vectors on the heap (one vector per scope
+level; link to parent in 0th slot). The variable names are separate,
+in debug info.
 
-### Compiler (in uts.scm)
+The stack is organized in frames; at the top of a frame not currently
+live are stored: return PC, code vector, lexical environment, previous
+frame pointer.
+
+### Compiler (in abcs/compiler.scm)
 
 The `parse-form` function compiles Scheme to bytecode. Key sections:
 - Lexical environment handling (`lexical-env/lookup`, `lexical-env/extend`)
@@ -92,44 +103,27 @@ The `parse-form` function compiles Scheme to bytecode. Key sections:
 - Special form expansion (let, letrec, cond, case, do, quasiquote)
 - Primitive open-coding when `*open-code-primitives?*` is true
 
-### FASL Format
+### Initial heap in init.c
 
-Binary format for compiled code with magic number `0xFADDF00D`. Integers use 7-bit varint encoding with zigzag for signed values. Supports: symbols, pairs, integers, floats, booleans, strings, chars, vectors, code objects, closures.
-
-## Key Global Variables (Scheme)
-
-- `@command-line-args`: Command line arguments list
-- `@error-cont`: Continuation for error recovery
-- `@reset`: Continuation to restart REPL
-- `@open-code-primitives?`: Controls primitive inlining (default `#t`)
-
-## Debugging
-
-From the REPL after an error:
-```scheme
-(debug)      ; Enter debugger
-(%proceed v) ; Continue with value v
-(dis proc)   ; Disassemble a procedure
-```
-
-Debugger commands: `?` help, `u` up to caller, `d` down to callee, `e` env, `n` next env frame, `a` assembly, `s` stack, `b` backtrace, `q` quit.
+A serialized DAG encoded into literal bytes, deserialized at
+startup. Supports: symbols, pairs, integers, booleans, strings, chars,
+vectors, closures, refs to previous data. Integers use 7-bit varint
+encoding with zigzag for signed values.
 
 ## Implementation Notes
 
-- Global names starting with `@` are internal
-- Redefining standard procedures like `map` can break the compiler
+- See user's guide Guide.md
+- Redefining built-ins can potentially break the compiler
 - Numeric tower: fixnums (62-bit) and IEEE doubles only
-- Macros (R4RS macro appendix) are not implemented
-- Bitwise primitives: `bitwise-and`, `bitwise-ior`, `bitwise-xor`, `bitwise-not`, `arithmetic-shift`
 
 ## Testing and Benchmarking
 
 ```bash
 # Run R4RS test suite
-./run-tests
+test/run-tests
 
 # Run corpus tests (real Scheme programs)
-./corpus/run-corpus
+corpus/run-corpus
 
 # Run benchmarks (tak, fib, ack, sum, sum-fp, fac, superopt, um)
 ./run-bench

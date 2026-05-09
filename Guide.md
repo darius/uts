@@ -16,6 +16,22 @@ complaint and exits to the OS with status 1.
 Any further command-line arguments are just made available to your
 Scheme code (see `%command-line-arguments` below).
 
+## Using the REPL
+
+At the prompt you can of course enter an expression and see its value:
+```
+-> (+ 2 3)
+5
+```
+
+TODO document features:
+- ,commands
+- ctrl-d to exit
+- %, %%, %%% recent history
+- `cycle-write`
+- when value is 'unspecified', it's not written
+
+
 ## Differences from R4RS
 
 Symbols and identifiers are case sensitive: `(eq? 'foo 'FOO)` is
@@ -66,6 +82,9 @@ What to do after `%error` complains to the user:
 ## Debugging
 
 TODO proper documentation
+- debugger
+- %avast
+- %yo
 
 From the REPL after an error:
 
@@ -95,7 +114,9 @@ You can define macros using `%define-macro`, though it's very
 crude. See the system sources for examples and how it works. (Common
 Lisp `defmacro` would be a natural next step if you like macros.)
 
-## System Interface
+Also some built-in functions: `%macroexpand-1`, etc.
+
+## OS interface
 
 ### `%command-line-arguments`
 
@@ -146,6 +167,14 @@ Evaluate an expression in the global environment. This is the internal evaluator
 ```scheme
 (%eval '(+ 1 2))  ; => 3
 ```
+
+### `(include "filename")`
+
+Like `(load "filename")` with two differences:
+- While `load` is a function which evaluates the contents of the file
+  in the global environment, `include` instead is a macro which
+  replaces itself with `(begin <contents-of-the-file>)`.
+- `"filename"` must be a literal string, not a general expression.
 
 ## Bitwise Operations
 
