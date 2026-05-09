@@ -186,7 +186,10 @@ These follow SRFI-60 naming (not prefixed with `%` since they're widely standard
 - `(bitwise-not n)` - Bitwise complement
 - `(arithmetic-shift n count)` - Shift left (positive count) or right (negative count)
 
-All operate on fixnums only. They don't raise an error on overflow. XXX arithmetic-shift should
+All operate on fixnums only, i.e. 62-bit 2's-complement integers (in
+the current implementation). Thus a bitwise op that messes with the
+sign bit will return a nonportable result. `arithmetic-shift` can
+overflow to a non-fixnum, in which case it will raise an error.
 
 ## Misc utilities
 
