@@ -1,30 +1,12 @@
-;;;; Minimal def of delay/force from R4RS
-
-(%define-macro 'delay
-               (lambda rands
-                 (if (not (and (pair? rands) (null? (cdr rands))))
-                     (%error "Syntax error" "Requires one operand" `(delay ,@rands)))
-                 (let ((expr (car rands)))
-                   `(%make-promise (lambda () ,expr)))))
-
-(define (%make-promise proc)
-  (let ((result-ready? #f)
-        (result #f))
-    (lambda ()
-      (if result-ready?
-          result
-          (let ((x (proc)))
-            (if result-ready?
-                result
-                (begin (set! result-ready? #t)
-                       (set! result x)
-                       result)))))))
-
-(define (force promise)
-  (promise))
-
 ;;;; Misc macros
 (begin
+
+  (%define-macro 'delay
+                 (lambda rands
+                   (if (not (and (pair? rands) (null? (cdr rands))))
+                       (%error "Syntax error" "Requires one operand" `(delay ,@rands)))
+                   (let ((expr (car rands)))
+                     `(%make-promise (lambda () ,expr)))))
 
   (%define-macro '%yo ;; crude printf-debugging convenience
                  (lambda rands

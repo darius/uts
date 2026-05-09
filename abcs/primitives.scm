@@ -161,12 +161,8 @@
 	      L1
 	      (append L1 (loop (car lsts) (cdr lsts))))))))
 
-;;;
-;;; End of special variable-arity definitions
-;;;
 
-
-; Misc
+;;; Misc
 
 (begin
 
@@ -196,7 +192,7 @@
 	  (else (%error "Too many arguments to procedure" arg-list))))
 
 
-  ; List procs
+  ;; List procs
 
   (define (list? x)
     (let loop ((slow x) (fast x))
@@ -265,7 +261,7 @@
 	       (loop (map cdr lsts))))))))
 
 
-  ; Numbers
+  ;; Numbers
 
   (define (gcd . args)
     (define (gcd2 a b)
@@ -327,7 +323,7 @@
 	(floor n)))
 
 
-  ; Characters
+  ;; Characters
 
   (define (char>=? c1 c2) (not (char<? c1 c2)))
   (define (char>? c1 c2)  (char<? c2 c1))
@@ -360,7 +356,7 @@
 	c))
 
 
-  ; Vector procs
+  ;; Vector procs
 
   (define (vector . elements) (list->vector elements))
 
@@ -375,7 +371,7 @@
 	((= n 0) L)))
 
 
-  ; Strings
+  ;; Strings
 
   (define (%string-compare <? =? length-compare?)
     (lambda (s1 s2)
@@ -461,7 +457,7 @@
 	(string-set! copy i (string-ref str i)))))
 
 
-  ; I/O
+  ;; I/O
 
   (define (newline . opt:port)
     (write-char #\newline
@@ -477,4 +473,24 @@
     (let ((port (open-output-file file)))
       (let ((result (proc port)))
 	(close-output-port port)
-	result))))
+	result)))
+
+  ;; delay/force, minimal def from R4RS
+
+  (define (%make-promise proc)
+    (let ((result-ready? #f)
+          (result #f))
+      (lambda ()
+        (if result-ready?
+            result
+            (let ((x (proc)))
+              (if result-ready?
+                  result
+                  (begin (set! result-ready? #t)
+                         (set! result x)
+                         result)))))))
+
+  (define (force promise)
+    (promise))
+
+  )
