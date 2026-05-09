@@ -52,7 +52,7 @@ Enter an expression. On an error, enter ,d to debug. For more commands: ,help
 5
 -> ,help
 ,help        - this message
-,d           - (debug)
+,d           - debug the last error, i.e. (%debug)
 ,l name      - (load "name.scm")
 ,l "x.scm"   - (load "x.scm")
 ,! expr      - evaluate expr for effect, don't print it

@@ -124,13 +124,13 @@
     (case cmd
       ((help)
        (display ",help        - this message\n")
-       (display ",d           - (debug)\n")
+       (display ",d           - debug the last error, i.e. (%debug)\n")
        (display ",l name      - (load \"name.scm\")\n")
        (display ",l \"x.scm\"   - (load \"x.scm\")\n")
        (display ",! expr      - evaluate expr for effect, don't print it\n")
        (display ",time expr   - time the evaluation of expr\n"))
       ((d)
-       (debug))
+       (%debug))
       ((l)
        (let ((arg (read)))
          (cond ((string? arg) (load arg))
@@ -198,10 +198,10 @@
 	    (list->vector (map car prim-2-list))
 	    (list->vector (map car prim-3-list))))
 
-  (define (dis proc)
-    (disassemble (%closure->code proc) -1))
+  (define (%disassemble proc)
+    (disassemble-code (%closure->code proc) -1))
 
-  (define (disassemble code current-pc)
+  (define (disassemble-code code current-pc)
     (dump-asm (disassemble-instrucs code) 2 current-pc))
 
   (define (dump-asm asm margin current-pc)
@@ -548,9 +548,9 @@
 
   ;;; The interactive debugger
 
-  (define (debug)
+  (define (%debug)
     (if (continuation? %error-cont)
-	(inspect-cont %error-cont)
+	(%inspect-cont %error-cont)
 	(%error "No context to debug")))
 
   ;; Break into the debugger after printing the args.
@@ -559,10 +559,10 @@
     (for-each (lambda (arg) (write arg) (newline))
               args)
     (call/cc (lambda (cont)
-               (inspect-cont cont)
+               (%inspect-cont cont)
                (if (null? args) unspecified (car args)))))
 
-  (define (inspect-cont cont)
+  (define (%inspect-cont cont)
 
     (define (prompt-and-read prompt)
       (display prompt)
@@ -636,7 +636,7 @@
 		  (interact frame callees next-lmap next)))))
 
 	((a assembly)
-	 (disassemble (frame->code frame) (frame->pc frame))
+	 (disassemble-code (frame->code frame) (frame->pc frame))
 	 (again))
 
 	((s stack)
