@@ -179,23 +179,23 @@
 
 (begin
 
-  (define prim-name-vectors
+  (define %prim-name-vectors
     (vector (list->vector (map car prim-0-list))
 	    (list->vector (map car prim-1-list))
 	    (list->vector (map car prim-2-list))
 	    (list->vector (map car prim-3-list))))
 
   (define (%disassemble proc)
-    (disassemble-code (%closure->code proc) -1))
+    (%disassemble-code (%closure->code proc) -1))
 
-  (define (disassemble-code code current-pc)
-    (dump-asm (disassemble-instrucs code) 2 current-pc))
+  (define (%disassemble-code code current-pc)
+    (%dump-asm (%disassemble-instrucs code) 2 current-pc))
 
-  (define (dump-asm asm margin current-pc)
+  (define (%dump-asm asm margin current-pc)
 
     (define (write-prim arity index)
       (write-char #\space)
-      (display (vector-ref (vector-ref prim-name-vectors arity) index))
+      (display (vector-ref (vector-ref %prim-name-vectors arity) index))
       (newline))
 
     (define (indent margin) 
@@ -224,11 +224,11 @@
 		    ((proc)
                      (let ((code (cadr i)))
                        (write-char #\space)
-                       (write (code->label code))
+                       (write (%code->label code))
 		       (newline)
-		       (dump-asm (disassemble-instrucs code)
-			         (+ margin 5)
-			         -1)))
+		       (%dump-asm (%disassemble-instrucs code)
+			          (+ margin 5)
+			          -1)))
 		    ((prim-0) (write-prim 0 (cadr i)))
 		    ((prim-1) (write-prim 1 (cadr i)))
 		    ((prim-2) (write-prim 2 (cadr i)))
@@ -242,23 +242,23 @@
 	      asm))
 
 
-  (define (disassemble-instrucs code)
-    (let ((L (string-length (code->bytecodes code))))
+  (define (%disassemble-instrucs code)
+    (let ((L (string-length (%code->bytecodes code))))
       (let loop ((i 0) (acc '()))
 	(if (<= L i)
 	    (reverse acc)
-	    (disassemble-instruc i code
-				 (lambda (width dis)
-				   (loop (+ i width)
-					 (cons (list i dis)
-					       acc))))))))
+	    (%disassemble-instruc i code
+				  (lambda (width dis)
+				    (loop (+ i width)
+					  (cons (list i dis)
+					        acc))))))))
 
   ;; Return (k width parts)
   ;;   where width is the #bytes encoding this instruction + its args
   ;;   and parts is the instruction name and arguments as parsed from the encoding.
-  (define (disassemble-instruc pc code k)
+  (define (%disassemble-instruc pc code k)
     (define (byte-ref offset) 
-      (char->integer (string-ref (code->bytecodes code) (+ pc offset))))
+      (char->integer (string-ref (%code->bytecodes code) (+ pc offset))))
     (define (take nbytes . args)
       (let ((iname (vector-ref %instruc-names (byte-ref 0))))
         (k (+ nbytes 1) (cons iname args))))
@@ -268,19 +268,19 @@
              (%error "Bad instruc specs" specs))
             (else
               (case (car specs)
-	        ((d) (take 1 (vector-ref (code->constants code) (byte-ref 1))))
+	        ((d) (take 1 (vector-ref (%code->constants code) (byte-ref 1))))
 	        ((w) (take 2 (+ (+ pc 3)
 			        (+ (* 256 (byte-ref 1)) (byte-ref 2)))))
 	        ((b) (take 1 (byte-ref 1)))
                 ((locals) (let ((n-locals (byte-ref 1))
-                                (lmap (code->locals-map code)))
+                                (lmap (%code->locals-map code)))
                             (take 1 (if (pair? lmap) ; (let's be robust to stripping debug info)
                                         (car lmap)
                                         n-locals))))
                 ((v) (let ((depth (byte-ref 1))
                            (offset (byte-ref 2)))
                        (take 2
-                             (%locals-map-ref (code->locals-map code) depth offset)
+                             (%locals-map-ref (%code->locals-map code) depth offset)
                              `(at ,depth ,offset))))
 	        (else (%error "BUG: bad instruc arg" spec))))))))
 
@@ -294,7 +294,7 @@
 ;;;; E.g.:
 ;;;; > (define a (list 'x))
 ;;;; > (set-cdr! a a)
-;;;; > (cycle-write a)
+;;;; > (%cycle-write a)
 ;;;; #1 = (x . #1) 
 ;;;;
 ;;;; I'll fold this into the main system writer sometime...
@@ -302,22 +302,22 @@
 
 (begin
 
-  (define (cycle-write x . optional-port)
+  (define (%cycle-write x . optional-port)
     (let ((out (%optional-arg optional-port (current-output-port)))
-	  (table (make-cycle-table)))
-      (traverse table x)
-      (cw out table x)
+	  (table (%make-cycle-table)))
+      (%traverse table x)
+      (%cw out table x)
       (begin)))
 
-  (define (traverse table obj)
+  (define (%traverse table obj)
     (let walk ((obj obj))
       (cond ((and (pair? obj)
-		  (not (table-visit! table obj)))
+		  (not (%table-visit! table obj)))
 	     (walk (car obj))
 	     (walk (cdr obj)))
 	    ((and (vector? obj)
 		  (< 0 (vector-length obj))
-		  (not (table-visit! table obj)))
+		  (not (%table-visit! table obj)))
 	     (let loop ((i (vector-length obj)))
 	       (cond ((< 0 i)
 		      (walk (vector-ref obj (- i 1)))
@@ -331,10 +331,10 @@
   ;;   -N: (negative) we've seen it and written it.
   ;; The counter assigns a unique N to each object seen more than once.
 
-  (define (make-cycle-table)
+  (define (%make-cycle-table)
     (list '() 0))
 
-  (define (table-visit! table obj)
+  (define (%table-visit! table obj)
     (cond ((assq obj (car table))
 	   => (lambda (pair)
 		(cond ((eq? #t (cdr pair))
@@ -347,22 +347,22 @@
 		     (cons (cons obj #t) (car table)))
 	   #f)))
 
-  (define (table-ref table obj)
+  (define (%table-ref table obj)
     (cond ((assq obj (car table)) => cdr)
 	  (else #f)))
 
-  (define (table-set! table obj value)
+  (define (%table-set! table obj value)
     (cond ((assq obj (car table))
 	   => (lambda (pair)
 		(set-cdr! pair value)))))
 
-  (define (cw out table obj)
+  (define (%cw out table obj)
 
     (define (put str)
       (display str out))
 
     (define (check-table obj write-obj)
-      (cond ((table-ref table obj)
+      (cond ((%table-ref table obj)
 	     => (lambda (label)
 		  (if (not (number? label))     ; Only one visit
 		      (write-obj)
@@ -370,7 +370,7 @@
 			     (put "#")
 			     (put label)
 			     (put "=")
-			     (table-set! table obj (- label)) ; Mark first visit
+			     (%table-set! table obj (- label)) ; Mark first visit
 			     (write-obj))
 			    (else		; A later visit
 			     (put "#")
@@ -386,7 +386,7 @@
 	     (put "(")
 	     (recur (car obj))
 	     (let loop ((L (cdr obj)))
-	       (let ((label (table-ref table L)))
+	       (let ((label (%table-ref table L)))
 		 (cond ((null? L) 'ok)
 		       ((or (not (pair? L)) 
 			    (number? label))
@@ -418,108 +418,109 @@
 
 (begin
 
-  ;;; The parts of a closure: lexical environment and code object.
+  ;;; The parts of a closure: runtime environment (renv) and code object.
 
-  ;;; The env is a linked list of env frames, where each frame is
-  ;;; represented by a vector with the link in slot 0.
+  ;;; The renv is a linked list of environment frames (one frame per
+  ;;; scope level), where each frame is a vector whose slot 0 links to
+  ;;; the enclosing renv, and the other slots hold variable values.
 
-  (define (environment? x)
+  (define (%renv? x)
     (vector? x))
 
-  (define (env-empty? env)
+  (define (%renv/empty? env)
     (= 0 (vector-length env)))
 
-  (define (env->enclosing env)
+  (define (%renv->enclosing env)
     (vector-ref env 0))
 
-  (define (env->inner-frame env)
+  (define (%renv->inner-frame env)
     (cdr (vector->list env)))
 
   ;; lmap is a locals-map, env is a corresponding runtime env.
   ;; As usual we're robust to a stripped locals-map.
   (define (%show-env-outer-frame lmap env)
-    (if (not (env-empty? env))
+    (if (not (%renv/empty? env))
         (%show-env-frame (if (pair? lmap) (car lmap) '())
-                         (env->inner-frame env))))
+                         (%renv->inner-frame env))))
 
   (define (%show-env-frame vars vals)
     (if (= (length vars) (length vals))
         (for-each (lambda (var val)
-                    (write var) (display ": ") (cycle-write val) (newline))
+                    (write var) (display ": ") (%cycle-write val) (newline))
                   vars
                   vals)
 	(%print-each vals)))
 
   (define (%print-each ls)
-    (for-each (lambda (x) (cycle-write x) (newline))
+    (for-each (lambda (x) (%cycle-write x) (newline))
 	      ls))
 
   ;;; The code object holds "actual code" for the vm interpreter, plus
   ;;; for the debugger a label (human-readable full name) and locals-map.
 
-  (define (code? x)
+  (define (%code? x)
     (and (vector? x)
 	 (= (vector-length x) 6)
 	 (eq? (vector-ref x 0) 'code-vector)))
 
-  (define (vector-ref-at i)
+  (define (%vector-ref-at i)
     (lambda (vec) (vector-ref vec i)))
 
-  (define code->constants (vector-ref-at 1))
-  (define code->bytecodes (vector-ref-at 2))
-  (define code->label     (vector-ref-at 3))
-  (define code->locals-map (vector-ref-at 4))
-  (define code->profile   (vector-ref-at 5))
+  (define %code->constants  (%vector-ref-at 1))
+  (define %code->bytecodes  (%vector-ref-at 2))
+  (define %code->label      (%vector-ref-at 3))
+  (define %code->locals-map (%vector-ref-at 4))
+  (define %code->profile    (%vector-ref-at 5))
 
 
   ;;; Continuations
   ;;; Implemented as a procedure with a particular code-vector, with the
   ;;; interpreter's stack saved as a Scheme vector in the closure's lex-env slot.
 
-  (define continuation? 
+  (define %continuation?
     (let ((cont-code (call/cc %closure->code)))
       (lambda (obj)
 	(and (procedure? obj)
 	     (eq? (%closure->code obj) cont-code)))))
 
-  (define (continuation->stack cont)
+  (define (%continuation->stack cont)
     (vector-ref (%closure->lex-env cont) 1))
 
 
   ;;; Continuation stack frames: contiguous segments of a stack vector (svec),
   ;;; each designated by an index (sptr) pointing just after the segment.
 
-  (define (make-frame svec sptr)
+  (define (%make-frame svec sptr)
     (list svec sptr))
 
-  (define frame/svec car)
-  (define frame/sptr cadr)
+  (define %frame/svec car)
+  (define %frame/sptr cadr)
 
-  (define (frame/ref offset tag ok?)
+  (define (%frame/ref offset tag ok?)
     (lambda (frame)
-      (let ((x (vector-ref (frame/svec frame) (- (frame/sptr frame) offset))))
+      (let ((x (vector-ref (%frame/svec frame) (- (%frame/sptr frame) offset))))
 	(if (ok? x)
 	    x
 	    (%error "Bad ref to" tag x)))))
 
-  (define frame->pc      (frame/ref 4 'pc integer?))
-  (define frame->code    (frame/ref 3 'code code?))
-  (define frame->lex-env (frame/ref 2 'env environment?))
-  (define frame->base    (frame/ref 1 'base integer?)) ; value is the index of the start of this segment
+  (define %frame->pc   (%frame/ref 4 'pc integer?))
+  (define %frame->code (%frame/ref 3 'code %code?))
+  (define %frame->renv (%frame/ref 2 'env %renv?))
+  (define %frame->base (%frame/ref 1 'base integer?)) ; value is the index of the start of this segment
 
   ;; The caller is the next frame to the left of the base; or #f
   ;; for the final frame, a halt_code sentinel of no interest.
-  (define (frame->caller frame)
-    (let ((caller (make-frame (frame/svec frame) (frame->base frame))))
-      (if (= (frame->base caller) 0)
+  (define (%frame->caller frame)
+    (let ((caller (%make-frame (%frame/svec frame) (%frame->base frame))))
+      (if (= (%frame->base caller) 0)
           #f
           caller)))
 
   ;; Return the local stack elements as a list, with bottom of stack first.
-  (define (frame->stack frame)
-    (let ((svec (frame/svec frame))
-          (base (frame->base frame)))
-      (do ((sp (- (frame/sptr frame) 5)
+  (define (%frame->stack frame)
+    (let ((svec (%frame/svec frame))
+          (base (%frame->base frame)))
+      (do ((sp (- (%frame/sptr frame) 5)
                (- sp 1))
 	   (acc '()
                 (cons (vector-ref svec sp) acc)))
@@ -527,8 +528,8 @@
 
   ;; Return a list of the frame and all its successive callers, with
   ;; the final caller first.
-  (define (caller* frame)
-    (do ((frame frame (frame->caller frame))
+  (define (%caller* frame)
+    (do ((frame frame (%frame->caller frame))
          (ls '() (cons frame ls)))
         ((not frame) ls)))
 
@@ -536,7 +537,7 @@
   ;;; The interactive debugger
 
   (define (%debug)
-    (if (continuation? %error-cont)
+    (if (%continuation? %error-cont)
 	(%inspect-cont %error-cont)
 	(%error "No context to debug")))
 
@@ -573,8 +574,8 @@
 
     (define (go-to-frame frame callees)
       (interact frame callees
-                (code->locals-map (frame->code frame))
-		(frame->lex-env frame)))
+                (%code->locals-map (%frame->code frame))
+		(%frame->renv frame)))
 
     (define (interact frame callees lmap env)
 
@@ -591,7 +592,7 @@
          %void)
 
 	((u up)
-	 (let ((caller (frame->caller frame)))
+	 (let ((caller (%frame->caller frame)))
 	   (cond (caller 
 		  (go-to-frame caller (cons frame callees)))
 		 (else
@@ -606,16 +607,16 @@
 		(go-to-frame (car callees) (cdr callees)))))
 
 	((e env)
-	 (%show-env-outer-frame (code->locals-map (frame->code frame)) ;TODO ugh code dup
-                                (frame->lex-env frame))
+	 (%show-env-outer-frame (%code->locals-map (%frame->code frame)) ;TODO ugh code dup
+                                (%frame->renv frame))
 	 (go-to-frame frame callees))
 
 	((n next)
-	 (let ((next (if (env-empty? env)
+	 (let ((next (if (%renv/empty? env)
 			 env
-			 (env->enclosing env)))
+			 (%renv->enclosing env)))
                (next-lmap (if (null? lmap) '() (cdr lmap))))
-	   (cond ((env-empty? next)
+	   (cond ((%renv/empty? next)
 		  (say "No more environment frames.")
 		  (again))
 		 (else
@@ -623,17 +624,17 @@
 		  (interact frame callees next-lmap next)))))
 
 	((a assembly)
-	 (disassemble-code (frame->code frame) (frame->pc frame))
+	 (%disassemble-code (%frame->code frame) (%frame->pc frame))
 	 (again))
 
 	((s stack)
-	 (%print-each (frame->stack frame))
+	 (%print-each (%frame->stack frame))
 	 (again))
 
 	((b backtrace)
 	 (%print-each (map (lambda (frame)
-			     (code->label (frame->code frame)))
-			   (caller* frame)))
+			     (%code->label (%frame->code frame)))
+			   (%caller* frame)))
 	 (again))
 
 	(else 
@@ -642,8 +643,8 @@
 
     (display "Enter ? for help.\n")
     (let ((outer-frame 
-	   (let ((stack (continuation->stack cont)))
-	     (make-frame stack (vector-length stack)))))
+	   (let ((stack (%continuation->stack cont)))
+	     (%make-frame stack (vector-length stack)))))
       (interact outer-frame '()
-                (code->locals-map (frame->code outer-frame))
-                (frame->lex-env outer-frame)))))
+                (%code->locals-map (%frame->code outer-frame))
+                (%frame->renv outer-frame)))))
