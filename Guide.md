@@ -54,11 +54,9 @@ Other nonessentials omitted:
 - `transcript-on`, `transcript-off`
 - the macro appendix
 
-## Naming convention
+### Additions
 
-Non-standard definitions should use a `%` prefix: `%error`, `%system`.
-
-Some undocumented internals violate this convention. (XXX fixme)
+Added functions will be listed below. They're generally named with a `%` prefix.
 
 ## Error handling
 
