@@ -444,7 +444,7 @@ static Object void_marker;
 static Object current_input_port, current_output_port;
 static Object halt_code, just_invoke_code, reified_cont_code;
 static Object code_vector_symbol;
-static Object global_lex_env;
+static Object global_renv;
 static Object symbol_table;
 
 fast double 
@@ -563,15 +563,15 @@ cons (Object the_car, Object the_cdr)
 }
 
 fast Object 
-make_closure (Object lex_env, Object code_vector)
+make_closure (Object renv, Object code_vector)
 {
-  assert (is_vector (lex_env));
+  assert (is_vector (renv));
   assert (is_vector (code_vector));
-  return allot2 (a_closure, lex_env, code_vector);
+  return allot2 (a_closure, renv, code_vector);
 }
 
 fast Object
-closure_lex_env (Object closure)
+closure_renv (Object closure)
 {
   assert (is_closure (closure));
   return field_ref (closure, 0);
@@ -1955,7 +1955,7 @@ setup (void)
   current_input_port = make_port (an_input_port, stdin);
   current_output_port = make_port (an_output_port, stdout);
 
-  global_lex_env = allot_vector (0);
+  global_renv = allot_vector (0);
 
   code_vector_symbol = c_symbol ("code-vector");
   error_symbol = c_symbol ("%error");
@@ -1967,14 +1967,14 @@ setup (void)
     Object b = make_string (1);
     string_ptr (b) [0] = bop_halt;
     halt_code = 
-      make_code_vector (global_lex_env, b, c_symbol ("halt_code"), nil);
+      make_code_vector (global_renv, b, c_symbol ("halt_code"), nil);
   }
 
   {
     Object b = make_string (1);
     string_ptr (b) [0] = bop_invoke;
     just_invoke_code = 
-      make_code_vector (global_lex_env, b, c_symbol ("just_invoke_code"), nil);
+      make_code_vector (global_renv, b, c_symbol ("just_invoke_code"), nil);
   }
 
   {
@@ -1990,19 +1990,18 @@ setup (void)
             cons (cons (c_symbol ("stack-vector"), nil),
                   nil));
     reified_cont_code = 
-      make_code_vector (global_lex_env, str, c_symbol ("reified_cont_code"),
+      make_code_vector (global_renv, str, c_symbol ("reified_cont_code"),
                         locals_map);
   }    
 }
 
 fast Object *
-lookup_lex_env (Object lex_env, unsigned frame, unsigned offset)
+lookup_renv (Object renv, unsigned frame, unsigned offset)
 {
-  Object env = lex_env;
   for (; 0 < frame; --frame)
-    env = vector_ref (env, 0);
-  assert (offset + 1 < vector_length (env));
-  return vector_ptr (env) + (offset + 1);
+    renv = vector_ref (renv, 0);
+  assert (offset + 1 < vector_length (renv));
+  return vector_ptr (renv) + (offset + 1);
 }
 
 static void
@@ -2017,7 +2016,7 @@ unexpected_vm_error (void)
 
 typedef struct Interpreter {
   Object stack_vec;
-  Object code, lex_env;
+  Object code, renv;
   int pc, stack_ptr, frame_ptr;
 } Interpreter;
 
@@ -2043,12 +2042,12 @@ typedef struct Interpreter {
 #define save_state(scode, senv, soffset)	\
   do {    					\
     Object code_ = (scode);			\
-    Object env_ = (senv);			\
+    Object renv_ = (senv);			\
     int offset_ = (soffset);			\
     need (4);					\
     push (make_fixnum (offset_));		\
     push (code_);				\
-    push (env_);				\
+    push (renv_);				\
     push (make_fixnum (frame_ptr));		\
     frame_ptr = stack_ptr;			\
   } while (0)
@@ -2058,7 +2057,7 @@ typedef struct Interpreter {
     assert (stack_ptr == frame_ptr);		\
     frame_ptr = fixnum_value (pop ());		\
     assert (is_vector (top ()));		\
-    lex_env = pop ();				\
+    renv = pop ();				\
     assert (is_vector (top ()));		\
     code = pop ();				\
     bvec = string_ptr (vector_ref (code, 2));	\
@@ -2069,7 +2068,7 @@ typedef struct Interpreter {
 #define flush_registers()			\
   do {    					\
     interp->code      = code;			\
-    interp->lex_env   = lex_env;		\
+    interp->renv      = renv;		        \
     interp->pc        = pc;			\
     interp->stack_ptr = stack_ptr;		\
     interp->frame_ptr = frame_ptr;		\
@@ -2098,7 +2097,7 @@ enter_interpreter (Interpreter *interp)
   Object *stack = vector_ptr (interp->stack_vec);
 
   /* Hopefully these will be kept in registers */
-  Object code, lex_env;
+  Object code, renv;
   unsigned pc, stack_ptr, frame_ptr;
   Object *constants;
   const unsigned char *bvec;
@@ -2110,7 +2109,7 @@ enter_interpreter (Interpreter *interp)
 #endif
 
   code      = interp->code;
-  lex_env   = interp->lex_env;
+  renv      = interp->renv;
   pc        = interp->pc;
   stack_ptr = interp->stack_ptr;
   frame_ptr = interp->frame_ptr;
@@ -2191,9 +2190,9 @@ enter_interpreter (Interpreter *interp)
 
 static Object the_stack = nil;
 
-/* This is like save_state (code, lex_env, pc) inside enter_interpreter */
+/* This is like save_state (code, renv, pc) inside enter_interpreter */
 static void
-push_frame (Interpreter *i, Object code, Object lex_env, unsigned pc)
+push_frame (Interpreter *i, Object code, Object renv, unsigned pc)
 {
   Object *s = vector_ptr (i->stack_vec) + i->stack_ptr;
   if (stack_limit <= i->stack_ptr + 4)
@@ -2201,14 +2200,14 @@ push_frame (Interpreter *i, Object code, Object lex_env, unsigned pc)
 
   s [0] = make_fixnum (pc);
   s [1] = code;
-  s [2] = lex_env;
+  s [2] = renv;
   s [3] = make_fixnum (i->frame_ptr);
   i->stack_ptr += 4;
   i->frame_ptr = i->stack_ptr;
 }
 
 static Object
-interpret (Object code, Object lex_env)
+interpret (Object code, Object renv)
 {
   /* volatile needed for setjmp */
   volatile Interpreter i;
@@ -2218,12 +2217,12 @@ interpret (Object code, Object lex_env)
 
   i.stack_vec = the_stack;
   i.code      = code;
-  i.lex_env   = lex_env;
+  i.renv      = renv;
   i.pc        = 0;
   i.stack_ptr = 0;
   i.frame_ptr = 0;
 
-  push_frame ((Interpreter*)&i, halt_code, global_lex_env, 0);
+  push_frame ((Interpreter*)&i, halt_code, global_renv, 0);
 
   if (0 == setjmp (vm_error_catch_point)) 
     return enter_interpreter ((Interpreter*)&i);
@@ -2239,7 +2238,7 @@ interpret (Object code, Object lex_env)
 
   /* Make sure we have a clean stack frame... */
   if (i.pc < string_length (vector_ref (i.code, 2)))
-    push_frame ((Interpreter*)&i, i.code, i.lex_env, i.pc);
+    push_frame ((Interpreter*)&i, i.code, i.renv, i.pc);
   else
     i.stack_ptr = i.frame_ptr;
   
@@ -2269,8 +2268,8 @@ interpret (Object code, Object lex_env)
 static Object
 invoke0 (Object closure)
 {
-  Object lex_env = closure_lex_env (closure);
-  Object extended_env = make_vector (1, lex_env);
+  Object renv = closure_renv (closure);
+  Object extended_env = make_vector (1, renv);
   return interpret (closure_code (closure), extended_env);
 }
 
@@ -2284,7 +2283,7 @@ run_fasl (void)
   for (volatile int i = 0; i < vector_length (codes); ++i) 
     {
       Object o = vector_ref (codes, i);
-      interpret (o, global_lex_env);
+      interpret (o, global_renv);
       /* Reestablish catcher clobbered by interpret() */ /* FIXME */
       if (0 != setjmp (vm_error_catch_point))
         unexpected_vm_error ();

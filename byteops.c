@@ -20,14 +20,14 @@ break; case bop_varref:
       }
 #endif
     need (1);
-    push (*lookup_lex_env (lex_env, frame, offset));
+    push (*lookup_renv (renv, frame, offset));
   }
 
 break; case bop_varset:
   {
     unsigned frame = get_byte ();
     unsigned offset = get_byte ();
-    *lookup_lex_env (lex_env, frame, offset) = top ();
+    *lookup_renv (renv, frame, offset) = top ();
   }
 
 break; case bop_global_ref:
@@ -83,7 +83,7 @@ break; case bop_jump:
 break; case bop_proc:
   {
     need (1);
-    push (make_closure (lex_env, get_datum ()));
+    push (make_closure (renv, get_datum ()));
   }
 
 break; case bop_params:
@@ -103,7 +103,7 @@ break; case bop_params:
                           cons (c_symbol ("required-nargs:"),
                                 cons (make_fixnum (num_formals),
                                       cons (c_symbol ("callee:"),
-                                            cons (make_closure (lex_env, code), // TODO sucks that we have no handle on the original closure object at this point
+                                            cons (make_closure (renv, code), // TODO sucks that we have no handle on the original closure object at this point
                                                   cons (c_symbol ("arguments:"),
                                                         cons (arguments,
                                                               nil))))))));
@@ -114,11 +114,11 @@ break; case bop_params:
     else 
       {
         unsigned i;
-        Object new_lex_env = allot_vector (1 + num_formals);
-        vector_set (new_lex_env, 0, lex_env);
+        Object new_renv = allot_vector (1 + num_formals);
+        vector_set (new_renv, 0, renv);
         for (i = num_formals; i != 0; --i)
-          vector_set (new_lex_env, i, pop ());
-        lex_env = new_lex_env;
+          vector_set (new_renv, i, pop ());
+        renv = new_renv;
       }
   }
 
@@ -139,7 +139,7 @@ break; case bop_rest_params:
                           cons (c_symbol ("min-nargs:"),
                                 cons (make_fixnum (min_num_args),
                                       cons (c_symbol ("callee:"),
-                                            cons (make_closure (lex_env, code),
+                                            cons (make_closure (renv, code),
                                                   cons (c_symbol ("arguments:"),
                                                         cons (arguments,
                                                               nil))))))));
@@ -149,17 +149,17 @@ break; case bop_rest_params:
       } 
     else 
       {
-        Object new_lex_env = allot_vector (1 + 1 + min_num_args);
-        vector_set (new_lex_env, 0, lex_env);
+        Object new_renv = allot_vector (1 + 1 + min_num_args);
+        vector_set (new_renv, 0, renv);
         {
           unsigned i;
           Object rest_args = nil;
           for (i = num_args - min_num_args; i != 0; --i)
             rest_args = cons (pop (), rest_args);
-          vector_set (new_lex_env, 1 + min_num_args, rest_args);
+          vector_set (new_renv, 1 + min_num_args, rest_args);
           for (i = min_num_args; i != 0; --i)
-            vector_set (new_lex_env, i, pop ());
-          lex_env = new_lex_env;
+            vector_set (new_renv, i, pop ());
+          renv = new_renv;
         }
       }
   }
@@ -195,7 +195,7 @@ break; case bop_invoke:
       }
     pc = 0;
     code = closure_code (acc);
-    lex_env = closure_lex_env (acc);
+    renv = closure_renv (acc);
     constants = vector_ptr (vector_ref (code, 1));
     bvec = string_ptr (vector_ref (code, 2));
 #ifdef FUNCTION_PROFILING
@@ -218,7 +218,7 @@ break; case bop_invoke:
 break; case bop_save:
   {
     unsigned offset = get_short ();
-    save_state (code, lex_env, pc + offset);
+    save_state (code, renv, pc + offset);
   }
 
 break; case bop_apply:
@@ -275,7 +275,7 @@ break; case bop_get_cc:
 
     /* Now give env an env frame: */
     env = allot_vector (2);
-    vector_set (env, 0, global_lex_env);
+    vector_set (env, 0, global_renv);
     vector_set (env, 1, saved_stack);
 
     /* Create a closure for the reified cont: */
@@ -499,9 +499,9 @@ break; case bop_prim_1:
     break; case p1_atan:
         { acc = float_op1 (atan, x0); }
 
-    break; case p1_closureTOlex_env:
+    break; case p1_closureTOrenv:
         { vm_check_type (is_closure (x0), x0);
-            acc = closure_lex_env (x0); }
+            acc = closure_renv (x0); }
 
     break; case p1_closureTOcode:
         { vm_check_type (is_closure (x0), x0);

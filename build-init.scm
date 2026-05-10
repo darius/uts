@@ -136,7 +136,7 @@
        (ref-table 'add obj))
       ((%closure? obj)
        (recur (%closure->code obj))
-       (recur (%closure->lex-env obj))
+       (recur (%closure->renv obj))
        (write-tag (tag obj) port))
       ((vector? obj)
        (let loop ((i (- (vector-length obj) 1)))

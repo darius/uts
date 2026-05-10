@@ -22,14 +22,14 @@
          (= (vector-length x) 3)
          (eq? (vector-ref x 0) closure-tag)))
 
-  (define (%make-closure lex-env code)
-    (vector closure-tag lex-env code))
+  (define (%make-closure renv code)
+    (vector closure-tag renv code))
 
   (define (vector-ref-at i)
     (lambda (vec) (vector-ref vec i)))
 
-  (define %closure->lex-env (vector-ref-at 1))
-  (define %closure->code    (vector-ref-at 2))
+  (define %closure->renv (vector-ref-at 1))
+  (define %closure->code (vector-ref-at 2))
   ;; ----
 
   (include "build-init.scm")

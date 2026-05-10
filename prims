@@ -51,7 +51,7 @@
 1 asin
 1 acos
 1 atan
-1 %closure->lex-env
+1 %closure->renv
 1 %closure->code
 1 null?
 1 not

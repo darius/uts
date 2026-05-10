@@ -476,7 +476,7 @@
 
   ;;; Continuations
   ;;; Implemented as a procedure with a particular code-vector, with the
-  ;;; interpreter's stack saved as a Scheme vector in the closure's lex-env slot.
+  ;;; interpreter's stack saved as a Scheme vector in the closure's renv slot.
 
   (define %continuation?
     (let ((cont-code (call/cc %closure->code)))
@@ -485,7 +485,7 @@
 	     (eq? (%closure->code obj) cont-code)))))
 
   (define (%continuation->stack cont)
-    (vector-ref (%closure->lex-env cont) 1))
+    (vector-ref (%closure->renv cont) 1))
 
 
   ;;; Continuation stack frames: contiguous segments of a stack vector (svec),
