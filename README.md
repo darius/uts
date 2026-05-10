@@ -1,7 +1,5 @@
-## UTS Scheme
-
-A Scheme system I wrote in the 1990s and dropped a few years later,
-now being overhauled.
+UTS is a Scheme system I wrote in the 1990s and dropped a few years
+later, now being overhauled.
 
 It's a bytecode interpreter in C plus a compiler to the bytecode in
 Scheme. The compiler compiles itself into a C byte array which is then
@@ -15,8 +13,7 @@ macro appendix.
 
 ## Installing
 
-First install the [Boehm garbage collector][1] (though removing that
-dependency is on my agenda).
+First install the [Boehm garbage collector][1].
 
  [1]: https://www.hboehm.info/gc/
 
@@ -95,3 +92,9 @@ Beats me! At least it's pretty small. There's a little more motivation
 in the [original README](README.old.text). Goal for the overhaul: to
 be nicer to read, and maybe handy as a tractable personal programming
 environment.
+
+
+## Plans
+
+Next I intend to replace the conservative Boehm collector with a
+precise one.
