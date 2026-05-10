@@ -280,7 +280,7 @@
                 ((v) (let ((depth (byte-ref 1))
                            (offset (byte-ref 2)))
                        (take 2
-                             (locals-map-ref (code->locals-map code) depth offset)
+                             (%locals-map-ref (code->locals-map code) depth offset)
                              `(at ,depth ,offset))))
 	        (else (%error "BUG: bad instruc arg" spec))))))))
 

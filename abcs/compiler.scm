@@ -4,18 +4,18 @@
 
 (define %void (string->symbol "#!%void"))
 
-(define (%reduce fn id lst)
+(define (%foldr fn id lst)
   (let loop ((lst lst))
        (if (null? lst)
 	   id
 	   (fn (car lst)
 	       (loop (cdr lst))))))
 
-(define (andmap test? ls)
+(define (%every test? ls)
   (if (null? ls)
       #t
       (and (test? (car ls))
-	   (andmap test? (cdr ls)))))
+	   (%every test? (cdr ls)))))
 
 
 ;;;;
@@ -24,12 +24,12 @@
 
 (begin
 
-  (define make-lexical-address   cons)
-  (define lexical-address/depth  car)
-  (define lexical-address/offset cdr)
+  (define %make-lexical-address   cons)
+  (define %lexical-address/depth  car)
+  (define %lexical-address/offset cdr)
 
   ;; Return the lexical address, or v itself if free.
-  (define (lexical-env/lookup s v)
+  (define (%locals-map/lookup s v)
     (let nesting ((depth 0)
 		  (s s))
       (if (null? s)
@@ -41,25 +41,25 @@
 		  ((eq? (car vars) v)
                    (if (< 255 depth) (%error "Code too complex: nesting too deep" depth))
                    (if (< 255 index) (%error "Code too complex: too many locals" index))
-		   (make-lexical-address depth index))
+		   (%make-lexical-address depth index))
 		  (else
 		   (searching (cdr vars) (+ index 1))))))))
 
-  (define lexical-env/empty '())
+  (define %locals-map/empty '())
 
-  (define (lexical-env/extend s vals)
+  (define (%locals-map/extend s vals)
     (cons vals s))
 
   ;; Get the name behind a lexical address.
   ;; If the address is not mapped, return '<?>
   ;; -- that's not expected to come up, but I want this
   ;; to be robust to stripping debug info.
-  (define (locals-map-ref locals-map depth offset)
-    (list-ref/default (list-ref/default locals-map depth '())
-                      offset
-                      '<?>))
+  (define (%locals-map-ref locals-map depth offset)
+    (%list-ref/default (%list-ref/default locals-map depth '())
+                       offset
+                       '<?>))
 
-  (define (list-ref/default ls n default)
+  (define (%list-ref/default ls n default)
     (let loop ((ls ls) (n n))
       (cond ((null? ls) default)
             ((= n 0) (car ls))
@@ -103,10 +103,10 @@
   ;;; Constants tables
   ;;;
 
-  (define (constants/new)
+  (define (%constants/new)
     (cons 0 '()))
 
-  (define (constants/lookup datum constants)
+  (define (%constants/lookup datum constants)
     (cond ((assv datum (cdr constants))
 	   => cdr)
 	  (else
@@ -116,7 +116,7 @@
 	     (set-cdr! constants (cons (cons datum c) (cdr constants)))
 	     c))))
 
-  (define (constants->vector constants)
+  (define (%constants->vector constants)
     (let ((vec (make-vector (car constants) #f)))
       (for-each (lambda (pair)
 		  (vector-set! vec (cdr pair) (car pair)))
@@ -128,115 +128,115 @@
   ;;; Bytecode assembler ("lap", traditional name for Lisp assembler)
   ;;;
 
-  (define lap/position length)
-  (define lap/append append)
+  (define %lap/position length)
+  (define %lap/append append)
 
-  (define lap/restore 
+  (define %lap/restore 
     (list %bop-restore))
 
-  (define (lap/offset pos lap)
-    (let ((offset (- (lap/position lap) pos)))
+  (define (%lap/offset pos lap)
+    (let ((offset (- (%lap/position lap) pos)))
       (cons (quotient offset 256)
 	    (cons (remainder offset 256)
 		  lap))))
 
-  (define (lap/jump pos lap)
+  (define (%lap/jump pos lap)
     (cons %bop-jump
-	  (lap/offset pos lap)))
+	  (%lap/offset pos lap)))
 
-  (define (lap/unless pos lap)
+  (define (%lap/unless pos lap)
     (cons %bop-unless
-	  (lap/offset pos lap)))
+	  (%lap/offset pos lap)))
 
-  (define (lap/var addr lap)
+  (define (%lap/var addr lap)
     (cons %bop-var
-	  (cons (lexical-address/depth addr)
-		(cons (lexical-address/offset addr)
+	  (cons (%lexical-address/depth addr)
+		(cons (%lexical-address/offset addr)
 		      lap))))
 
-  (define (lap/var! addr lap)
+  (define (%lap/var! addr lap)
     (cons %bop-var!
-	  (cons (lexical-address/depth addr)
-		(cons (lexical-address/offset addr)
+	  (cons (%lexical-address/depth addr)
+		(cons (%lexical-address/offset addr)
 		      lap))))
 
-  (define (lap/params count lap)
+  (define (%lap/params count lap)
     (cons %bop-params
 	  (cons count lap)))
 
-  (define (lap/&rest-params count lap)
+  (define (%lap/&rest-params count lap)
     (cons %bop-&rest-params
 	  (cons count lap)))
 
-  (define (lap/save pos lap)
+  (define (%lap/save pos lap)
     (cons %bop-save 
-	  (lap/offset pos lap)))
+	  (%lap/offset pos lap)))
 
-  (define (lap/invoke lap)
+  (define (%lap/invoke lap)
     (cons %bop-invoke lap))
 
-  (define (lap/drop lap)
+  (define (%lap/drop lap)
     (cons %bop-drop lap))
 
-  (define (lap/prim-0 prim lap)
+  (define (%lap/prim-0 prim lap)
     (cons %bop-prim-0
 	  (cons prim lap)))
 
-  (define (lap/prim-1 prim lap)
+  (define (%lap/prim-1 prim lap)
     (cons %bop-prim-1
 	  (cons prim lap)))
 
-  (define (lap/prim-2 prim lap)
+  (define (%lap/prim-2 prim lap)
     (cons %bop-prim-2
 	  (cons prim lap)))
 
-  (define (lap/prim-3 prim lap)
+  (define (%lap/prim-3 prim lap)
     (cons %bop-prim-3
 	  (cons prim lap)))
 
-  (define (lap/lit datum constants lap)
+  (define (%lap/lit datum constants lap)
     (cons %bop-lit
-	  (cons (constants/lookup datum constants) 
+	  (cons (%constants/lookup datum constants) 
 		lap)))
 
-  (define (lap/glo symbol constants lap)
+  (define (%lap/glo symbol constants lap)
     (cons %bop-glo
-	  (cons (constants/lookup symbol constants) 
+	  (cons (%constants/lookup symbol constants) 
 		lap)))
 
-  (define (lap/glo! symbol constants lap)
+  (define (%lap/glo! symbol constants lap)
     (cons %bop-glo!
-	  (cons (constants/lookup symbol constants) 
+	  (cons (%constants/lookup symbol constants) 
 		lap)))
 
-  (define (lap/define symbol constants lap)
+  (define (%lap/define symbol constants lap)
     (cons %bop-define
-	  (cons (constants/lookup symbol constants) 
+	  (cons (%constants/lookup symbol constants) 
 		lap)))
 
-  (define (lap/proc code constants lap)
+  (define (%lap/proc code constants lap)
     (cons %bop-proc
-	  (cons (constants/lookup code constants)
+	  (cons (%constants/lookup code constants)
 		lap)))
 
 
-  (define gensym
+  (define %gensym
     (let ((counter 0))
       (lambda ()
 	(set! counter (+ counter 1))
 	(string->symbol
 	 (string-append "#!g_" (number->string counter))))))
 
-  (define *open-code-primitives?* #t)
+  (define %open-code-primitives? #t)
 
   ;; List of global functions to spare from tail call optimization, so the 
   ;; caller's frame stays visible on the stack. User-settable.
   (define %dont-tail-on-me '(error %error %avast))
 
 
-  ;; (PARSE-FORM form) returns a compiled code vector for a top-level form.
+  ;; (%COMPILE-FORM form) returns a compiled code vector for a top-level form.
   ;; The code will assume no params and an empty lexical environment ("top-level").
-  (define parse-form 
+  (define %compile-form 
     (let ()
 
       ;; The expression parser.
@@ -248,13 +248,13 @@
 	  (cond
 
 	    ((symbol? exp) 
-	     (let ((addr (lexical-env/lookup s exp)))
+	     (let ((addr (%locals-map/lookup s exp)))
 	       (if (symbol? addr) 
-		   (lap/glo addr constants k)
-		   (lap/var addr k))))
+		   (%lap/glo addr constants k)
+		   (%lap/var addr k))))
 
 	    ((not (pair? exp))
-	     (lap/lit exp constants k))
+	     (%lap/lit exp constants k))
 
 	    (else
 	     (let ((rator (car exp)) 
@@ -267,7 +267,7 @@
 
 		 ((quote)
 		  (assert (= num-rands 1))
-		  (lap/lit (car rands) constants k))
+		  (%lap/lit (car rands) constants k))
 
 		 ((if)
 		  (assert (or (= num-rands 2) 
@@ -277,16 +277,16 @@
 					 (caddr rands) 
 					 `',%void)))
 		    (pe (car rands)
-			(if (eq? k lap/restore)
+			(if (eq? k %lap/restore)
 			    (let ((e (pe alternative k)))
-			      (lap/unless (lap/position e)
-					  (lap/append (pe consequent k)
-						      e)))
-			    (let ((j (lap/position k))
+			      (%lap/unless (%lap/position e)
+					   (%lap/append (pe consequent k)
+						        e)))
+			    (let ((j (%lap/position k))
 				  (e (pe alternative k)))
-			      (lap/unless (lap/position e)
-					  (pe consequent 
-					      (lap/jump j e))))))))
+			      (%lap/unless (%lap/position e)
+					   (pe consequent 
+					       (%lap/jump j e))))))))
 
 		 ((lambda)
 		  (assert (and (< 1 num-rands)
@@ -299,21 +299,21 @@
 					      (if (pair? f)
 						  (cons (car f) (sans-dot (cdr f)))
 						  (list f))))))
-		    (let ((body-constants (constants/new))
+		    (let ((body-constants (%constants/new))
                           (var-count (length fixed-formals))
-                          (nest-s (lexical-env/extend s fixed-formals)))
+                          (nest-s (%locals-map/extend s fixed-formals)))
 		      (let ((lap (parse-exp body-constants
 					    label 
 					    (expand-lambda-body (cdr rands))
 					    nest-s
-					    lap/restore)))
-			(lap/proc
-			 (codify (if rest-args?
-				     (lap/&rest-params (- var-count 1) lap)
-				     (lap/params var-count lap))
-				 (constants->vector body-constants)
-				 label
-                                 nest-s)
+					    %lap/restore)))
+			(%lap/proc
+			 (%codify (if rest-args?
+				      (%lap/&rest-params (- var-count 1) lap)
+				      (%lap/params var-count lap))
+				  (%constants->vector body-constants)
+				  label
+                                  nest-s)
 			 constants
 			 k)))))
 
@@ -363,20 +363,20 @@
 			       (= num-rands 2)))
 		  (let ((name (car rands))
 			(exp (cadr rands)))
-		    (let ((addr (lexical-env/lookup s name)))
+		    (let ((addr (%locals-map/lookup s name)))
 		      (pe exp
 			  (if (symbol? addr) 
-			      (lap/glo! addr constants k)
-			      (lap/var! addr k))))))
+			      (%lap/glo! addr constants k)
+			      (%lap/var! addr k))))))
 
 		 ((begin)
 		  (if (null? rands)
-		      (lap/lit %void constants k)
+		      (%lap/lit %void constants k)
 		      (let loop ((head (car rands)) (tail (cdr rands)))
 			(pe head
 			    (if (null? tail)
 				k
-				(lap/drop (loop (car tail) (cdr tail))))))))
+				(%lap/drop (loop (car tail) (cdr tail))))))))
 
 		 ((let*)
 		  (assert (pair? rands))
@@ -402,7 +402,7 @@
 		   (case num-rands
 		     ((0) #f)
 		     ((1) (car rands))
-		     (else (let ((head (gensym)))
+		     (else (let ((head (%gensym)))
 			     `(let ((,head ,(car rands)))
 				(if ,head ,head (or . ,(cdr rands)))))))
 		   k))
@@ -423,7 +423,7 @@
 		      (if (not (and (list? (car rands))
 				    (= (length (car rands)) 3)))
 			  (syntax-error "Bad cond clause syntax" rands))
-		      (let ((test-var (gensym)))
+		      (let ((test-var (%gensym)))
 			`(let ((,test-var ,(caar rands)))
 			   (if ,test-var
 			       (,(caddar rands) ,test-var)
@@ -437,7 +437,7 @@
 		  (assert (pair? rands))
 		  (pe
 		   (let ((test (car rands))
-			 (sym (gensym)))
+			 (sym (%gensym)))
 		     `(let ((,sym ,test))
 			(cond 
 			 . ,(map 
@@ -469,7 +469,7 @@
 					    (valid-clauses? (cdr clauses))))))
 			       (pair? (cadr rands))))
 		  (pe
-		   (let ((loop (gensym))
+		   (let ((loop (%gensym))
 			 (variables (map car (car rands)))
 			 (inits (map cadr (car rands)))
 			 (steps (map (lambda (clause)
@@ -532,9 +532,9 @@
                             ;; (N.B. this case deliberately overrides the rator-is-bound case)
                             => (lambda (expand)
                                  (pe (apply expand rands) k)))
-		           ((symbol? (lexical-env/lookup s rator))
+		           ((symbol? (%locals-map/lookup s rator))
                             ;; rator is not locally bound -- application of global variable
-                            (cond ((and *open-code-primitives?*
+                            (cond ((and %open-code-primitives?
 		                        (prim-lookup rator num-rands))
                                    ;; open-coded primitive app
 		                   => (lambda (prim)
@@ -553,24 +553,24 @@
 
       (define (parse-call pe tail-ok? rator rands k)
 	(let ((lin (lambda (k2)
-		     (%reduce pe 
-			      (pe rator 
-				  (lap/invoke k2))
-			      rands))))
-	  (if (and tail-ok? (eq? k lap/restore))
+		     (%foldr pe 
+			     (pe rator 
+				 (%lap/invoke k2))
+			     rands))))
+	  (if (and tail-ok? (eq? k %lap/restore))
 	      (lin '())
-	      (lap/save (lap/position k)
-			(lin k)))))
+	      (%lap/save (%lap/position k)
+			 (lin k)))))
 
       (define (parse-prim-app pe prim rands num-rands k)
         (let ((primop-k ((case num-rands
-		           ((0) lap/prim-0)
-		           ((1) lap/prim-1)
-		           ((2) lap/prim-2)
-		           ((3) lap/prim-3))
+		           ((0) %lap/prim-0)
+		           ((1) %lap/prim-1)
+		           ((2) %lap/prim-2)
+		           ((3) %lap/prim-3))
 	                 prim
 	                 k)))
-          (%reduce pe primop-k rands)))
+          (%foldr pe primop-k rands)))
 
       (define (prim-lookup sym num-rands)
         (cond ((assq sym (case num-rands
@@ -681,7 +681,7 @@
       (define (valid-let? rands)
 	(and (<= 2 (length rands))
 	     (list? (car rands))
-	     (andmap (lambda (decl) 
+	     (%every (lambda (decl) 
 			(and (pair? decl)
 			     (pair? (cdr decl))
 			     (null? (cddr decl))
@@ -754,37 +754,37 @@
 	(%error "Syntax error" message irritants))
 
 
-      ;; Body of PARSE-FORM
+      ;; Body of %COMPILE-FORM
 
       (lambda (form)
-	(let ((constants (constants/new)))
+	(let ((constants (%constants/new)))
 	  (let ((lap
 		 (maybe-parse-definition 
 		  form
 		  (lambda (names exps)
 		    (do ((names (reverse names) (cdr names))
 			 (exps  (reverse exps)  (cdr exps))
-			 (k lap/restore
+			 (k %lap/restore
 			    (parse-exp constants
 				       (car names)
 				       (car exps)
-				       lexical-env/empty
-				       (lap/define (car names) 
-						   constants
-						   (if (null? (cdr names))
-						       k
-						       (lap/drop k))))))
+				       %locals-map/empty
+				       (%lap/define (car names) 
+						    constants
+						    (if (null? (cdr names))
+						        k
+						        (%lap/drop k))))))
 			((null? names) k)))
 		  (lambda () 
-		    (parse-exp constants '() form lexical-env/empty 
-			       lap/restore)))))
-	    (codify lap (constants->vector constants) #f lexical-env/empty))))))
+		    (parse-exp constants '() form %locals-map/empty 
+			       %lap/restore)))))
+	    (%codify lap (%constants->vector constants) #f %locals-map/empty))))))
 
 
   (define (%make-code-vector constants-vec bytes label locals-map)
     (vector 'code-vector constants-vec bytes label locals-map 0))
 
-  (define (codify lap constants-vec label locals-map)
+  (define (%codify lap constants-vec label locals-map)
     (%make-code-vector constants-vec
 		       (list->string (map integer->char lap))
 		       label
@@ -792,7 +792,7 @@
 
   (define (%eval form)
     ;; Compile to a top-level procedure with no params, and call it.
-    ((%make-closure '#() (parse-form form)))))
+    ((%make-closure '#() (%compile-form form)))))
 
 
 ;;;;
@@ -801,7 +801,7 @@
 
 (begin
 
-  (define variable-arity-prim-list
+  (define %variable-arity-prim-list
     '(peek-char read-char 
       write-char + - * / < <= = 
       make-vector make-string number->string string->number

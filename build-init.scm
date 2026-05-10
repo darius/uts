@@ -34,42 +34,42 @@
                 (cons o (reading))))))))
 
   (define (compile-to-fasl forms filename)
-    (%write-fasl (list->vector (map parse-form forms))
-                 filename))
+    (write-fasl (list->vector (map %compile-form forms))
+                filename))
 
   ;;; Generate code defining fixed-arity primitives.
 
   (define (variable-arity? prim-name)
-    (memq prim-name variable-arity-prim-list))
+    (memq prim-name %variable-arity-prim-list))
 
   (define (prim-def-source-code prim-names args)
     `(begin
-       ,@(%reduce (lambda (prim-name defs)
-		    (if (variable-arity? prim-name)
-			defs
-			(cons `(define ,prim-name
-				 (lambda ,args
-				   (,prim-name ,@args)))
-			      defs)))
-		  '()
-		  prim-names)))
+       ,@(%foldr (lambda (prim-name defs)
+		   (if (variable-arity? prim-name)
+		       defs
+		       (cons `(define ,prim-name
+				(lambda ,args
+				  (,prim-name ,@args)))
+			     defs)))
+		 '()
+		 prim-names)))
 
   (define closure-for-apply
     (%make-closure '#()
-		   (codify (cons %bop-apply '())
-			   '#()
-			   'apply
-                           lexical-env/empty)))
+		   (%codify (cons %bop-apply '())
+			    '#()
+			    'apply
+                            %locals-map/empty)))
 
   (define closure-for-call/cc
     (%make-closure '#()
-		    (codify (lap/params 1
-			      (cons %bop-get-cc
-				(lap/var (make-lexical-address 0 0)
-				  (lap/invoke '()))))
+		    (%codify (%lap/params 1
+                               (cons %bop-get-cc
+                                 (%lap/var (%make-lexical-address 0 0)
+                                   (%lap/invoke '()))))
 			    '#()
 			    'call-with-current-continuation
-                            (lexical-env/extend lexical-env/empty '(receiver)))))
+                            (%locals-map/extend %locals-map/empty '(receiver)))))
 
   (define (all-primitive-defs)
     `(begin
@@ -85,13 +85,13 @@
 
 ;;; The fasl format.
 
-(define (%write-fasl obj filename)
+(define (write-fasl obj filename)
   (call-with-output-file filename
     (lambda (out)
       (let ((ref-table (make-eq-table)))
-        (%write-fasl-obj obj ref-table out)))))
+        (write-fasl-obj obj ref-table out)))))
 
-(define (%write-fasl-obj obj ref-table port)
+(define (write-fasl-obj obj ref-table port)
 
   (define (tag obj)
     (cond

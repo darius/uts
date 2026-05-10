@@ -97,11 +97,11 @@ frame pointer.
 
 ### Compiler (in abcs/compiler.scm)
 
-The `parse-form` function compiles Scheme to bytecode. Key sections:
-- Lexical environment handling (`lexical-env/lookup`, `lexical-env/extend`)
-- Lap (bytecode assembly) generation functions (`lap/varref`, `lap/save`, etc.)
+The `%compile-form` function compiles Scheme to bytecode. Key sections:
+- Data structures: lexical addresses, compile-time environments, constants tables
+- Lap (bytecode assembly) generation functions (`%lap/var`, `%lap/save`, etc.)
 - Special form expansion (let, letrec, cond, case, do, quasiquote)
-- Primitive open-coding when `*open-code-primitives?*` is true
+- Primitive open-coding when `%open-code-primitives?` is true
 
 ### Initial heap in init.c
 
