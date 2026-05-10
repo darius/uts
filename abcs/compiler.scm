@@ -574,10 +574,10 @@
 
       (define (prim-lookup sym num-rands)
         (cond ((assq sym (case num-rands
-			   ((0) prim-0-list)
-			   ((1) prim-1-list)
-			   ((2) prim-2-list)
-			   ((3) prim-3-list)
+			   ((0) %prim-0-list)
+			   ((1) %prim-1-list)
+			   ((2) %prim-2-list)
+			   ((3) %prim-3-list)
 			   (else '())))
                => cadr)
               (else #f)))

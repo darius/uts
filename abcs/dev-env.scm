@@ -180,10 +180,10 @@
 (begin
 
   (define %prim-name-vectors
-    (vector (list->vector (map car prim-0-list))
-	    (list->vector (map car prim-1-list))
-	    (list->vector (map car prim-2-list))
-	    (list->vector (map car prim-3-list))))
+    (vector (list->vector (map car %prim-0-list))
+	    (list->vector (map car %prim-1-list))
+	    (list->vector (map car %prim-2-list))
+	    (list->vector (map car %prim-3-list))))
 
   (define (%disassemble proc)
     (%disassemble-code (%closure->code proc) -1))

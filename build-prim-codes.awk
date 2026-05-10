@@ -47,7 +47,7 @@ END {
     # Scheme output
     sfile = "primcodes.scm";
     for (arity = 0; arity <= 3; ++arity) {
-        printf("(define prim-%d-list\n", arity) >sfile;
+        printf("(define %%prim-%d-list\n", arity) >sfile;
         printf("  '(\n", arity) >sfile;
         for (i = 0; i < count[arity]; ++i) {
             printf("    (%-20s %d)\n", snames[arity, i], i) >sfile;

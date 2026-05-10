@@ -73,10 +73,10 @@
 
   (define (all-primitive-defs)
     `(begin
-       ,(prim-def-source-code (map car prim-0-list) '())
-       ,(prim-def-source-code (map car prim-1-list) '(x))
-       ,(prim-def-source-code (map car prim-2-list) '(x y))
-       ,(prim-def-source-code (map car prim-3-list) '(x y z))
+       ,(prim-def-source-code (map car %prim-0-list) '())
+       ,(prim-def-source-code (map car %prim-1-list) '(x))
+       ,(prim-def-source-code (map car %prim-2-list) '(x y))
+       ,(prim-def-source-code (map car %prim-3-list) '(x y z))
        (define apply ',closure-for-apply)
        (define call-with-current-continuation ',closure-for-call/cc)))
   )
