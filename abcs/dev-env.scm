@@ -94,10 +94,11 @@
       (if (eof-object? cmd)
           (newline)
           (cond ((and (pair? cmd) (eq? (car cmd) 'unquote) (pair? (cdr cmd)) (null? (cddr cmd)))
+                 ;; A command
                  (%comma-command (cadr cmd))
                  (%scheming))
                 (else
-                 ;; An expression
+                 ;; A Scheme form
 	         (let ((obj (%eval cmd)))
                    (cond ((not (eq? obj %void))
                           (set! %%% %%)
@@ -427,21 +428,21 @@
   (define (%renv? x)
     (vector? x))
 
-  (define (%renv/empty? env)
-    (= 0 (vector-length env)))
+  (define (%renv/empty? renv)
+    (= 0 (vector-length renv)))
 
-  (define (%renv->enclosing env)
-    (vector-ref env 0))
+  (define (%renv->enclosing renv)
+    (vector-ref renv 0))
 
-  (define (%renv->inner-frame env)
-    (cdr (vector->list env)))
+  (define (%renv->inner-frame renv)
+    (cdr (vector->list renv)))
 
-  ;; lmap is a locals-map, env is a corresponding runtime env.
+  ;; lmap is a locals-map, renv is a corresponding runtime environment.
   ;; As usual we're robust to a stripped locals-map.
-  (define (%show-env-outer-frame lmap env)
-    (if (not (%renv/empty? env))
+  (define (%show-env-outer-frame lmap renv)
+    (if (not (%renv/empty? renv))
         (%show-env-frame (if (pair? lmap) (car lmap) '())
-                         (%renv->inner-frame env))))
+                         (%renv->inner-frame renv))))
 
   (define (%show-env-frame vars vals)
     (if (= (length vars) (length vals))
@@ -451,9 +452,9 @@
                   vals)
 	(%print-each vals)))
 
-  (define (%print-each ls)
+  (define (%print-each xs)
     (for-each (lambda (x) (%cycle-write x) (newline))
-	      ls))
+	      xs))
 
   ;;; The code object holds "actual code" for the vm interpreter, plus
   ;;; for the debugger a label (human-readable full name) and locals-map.
@@ -505,7 +506,7 @@
 
   (define %frame->pc   (%frame/ref 4 'pc integer?))
   (define %frame->code (%frame/ref 3 'code %code?))
-  (define %frame->renv (%frame/ref 2 'env %renv?))
+  (define %frame->renv (%frame/ref 2 'renv %renv?))
   (define %frame->base (%frame/ref 1 'base integer?)) ; value is the index of the start of this segment
 
   ;; The caller is the next frame to the left of the base; or #f
@@ -577,10 +578,10 @@
                 (%code->locals-map (%frame->code frame))
 		(%frame->renv frame)))
 
-    (define (interact frame callees lmap env)
+    (define (interact frame callees lmap renv)
 
       (define (again)
-	(interact frame callees lmap env))
+	(interact frame callees lmap renv))
 
       (case (prompt-and-read "debug> ")
 
@@ -612,9 +613,9 @@
 	 (go-to-frame frame callees))
 
 	((n next)
-	 (let ((next (if (%renv/empty? env)
-			 env
-			 (%renv->enclosing env)))
+	 (let ((next (if (%renv/empty? renv)
+			 renv
+			 (%renv->enclosing renv)))
                (next-lmap (if (null? lmap) '() (cdr lmap))))
 	   (cond ((%renv/empty? next)
 		  (say "No more environment frames.")
