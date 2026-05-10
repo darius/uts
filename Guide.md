@@ -18,7 +18,7 @@ Scheme code (see `%command-line-arguments` below).
 
 ## Using the REPL
 
-At the prompt you can of course enter an expression and see its value:
+At the prompt `->` you enter an expression, then see its value:
 ```
 -> (+ 2 3)
 5
@@ -34,16 +34,18 @@ TODO document REPL features:
 
 ## Differences from R4RS
 
+### Case sensitivity
+
 Symbols and identifiers are case sensitive: `(eq? 'foo 'FOO)` is
 false. Other Schemes like Chez and Guile make the same choice, though
-R4RS contradicts it: it says "For example, Foo is the same identifier as FOO."
+R4RS forbids this, saying "For example, Foo is the same identifier as FOO."
 
-## R4RS nonessential features omitted
+### R4RS nonessentials omitted
 
 Omitted numeric types: big integers (over 60 bits), rational numbers, complex numbers.
 
 Their associated procedures:
-- `numerator`, `denominator, `rationalize
+- `numerator`, `denominator, `rationalize`
 - `make-rectangular`, `make-polar`, `real-part`, `imag-part`, `magnitude`, `angle`
 
 Other nonessentials omitted:
