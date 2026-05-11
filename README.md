@@ -1,11 +1,10 @@
-UTS is a Scheme system I wrote in the 1990s and dropped a few years
-later, now being overhauled.
+UTS is a Scheme system I wrote in the 1990s, abandoned a few years
+later, and resurrected in 2026.
 
 It's a bytecode interpreter in C plus a compiler to the bytecode in
-Scheme. The compiler compiles itself into a C byte array which is then
-included into the C source. You need another Scheme system for this
-initial bootstrapping. (Once you have it, you can drop the other
-Scheme and use UTS to develop itself.)
+Scheme. To bootstrap this compiler you need another Scheme system
+initially, though after this first compile you can drop the other
+Scheme and use UTS to develop itself, if you wish.
 
 It conforms to R4RS (mostly), omitting optional features like the
 macro appendix.
@@ -17,10 +16,9 @@ First install the [Boehm garbage collector][1].
 
  [1]: https://www.hboehm.info/gc/
 
-You'll need a standard Scheme preinstalled to bootstrap the bytecode
-compiler into C. [Chez Scheme][2] or [Guile][3] should just work. For
-another Scheme, try `export BOOTSCHEME=<the_other_scheme>` before
-running `make`. You may need to also edit the top of
+You'll need a Scheme to bootstrap with: [Chez Scheme][2] or [Guile][3]
+should just work. For another Scheme, try `export BOOTSCHEME=<the_other_scheme>`
+before running `make` below. In this case you may need to also edit the top of
 [`load-init.scm`][4] to supply a few nonportable Scheme
 functions. Chez and Guile have a nonstandard Scheme function `include`
 which this bootstrap depends on; `(define include load)` might work on
@@ -101,7 +99,7 @@ environment.
 
 ## How could this suck less?
 
-These would be nice:
+These would be nice next goals:
 - Some reasonable way to intercept errors you want to intercept.
 - Source-level debugging.
 - More-helpful errors from primitive procedures.
