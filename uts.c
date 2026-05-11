@@ -198,12 +198,6 @@ fast Flag is_symbol (Object obj) {return is_boxed(obj) && tag(obj)==a_symbol;}
 fast Flag is_vector (Object obj) {return is_boxed(obj) && tag(obj)==a_vector;}
 
 fast Flag 
-is_port (Object obj)
-{
-  return is_input_port (obj) || is_output_port (obj);
-}
-
-fast Flag 
 is_number (Object obj)
 {
   return is_fixnum (obj) || is_flonum (obj);
