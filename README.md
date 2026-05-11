@@ -101,3 +101,13 @@ These would be nice:
 - Source-level debugging.
 - More-helpful errors from primitive procedures.
 - A precise GC in place of the conservative Boehm collector.
+
+
+## Authorship
+
+- Initial resurrection in 2026: Claude Opus 4.5. Fixed undefined
+  behavior shown up by newer C compilers, converted to 64 bits,
+  overhauled configure/build/install, added tests and profiling,
+  other small improvements, helped with perf. Thanks, Claude!
+
+- Before and after: me, Darius
