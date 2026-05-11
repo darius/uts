@@ -18,12 +18,15 @@ First install the [Boehm garbage collector][1].
  [1]: https://www.hboehm.info/gc/
 
 You'll need a standard Scheme preinstalled to bootstrap the bytecode
-compiler into C. Chez Scheme or Guile should just work. For another
+compiler into C. [Chez Scheme][2] or [Guile][3] should just work. For another
 Scheme, edit `build-init` to give the executable name. You may need to
 also edit the top of `load-init.scm` to supply a few nonportable
 Scheme functions. Chez and Guile have a nonstandard Scheme function
 `include` which this bootstrap depends on; `(define include load)`
 might work on other Schemes, but I haven't tried that.
+
+ [2]: https://cisco.github.io/ChezScheme/
+ [3]: https://www.gnu.org/software/guile/
 
 The C code currently assumes 64 bits and a few other things more
 modern than the 90s original. Will document/improve later.
