@@ -58,7 +58,8 @@ R4RS forbids this, saying "For example, Foo is the same identifier as FOO."
 
 ### R4RS nonessentials omitted
 
-Omitted numeric types: big integers (over 60 bits), rational numbers, complex numbers.
+Omitted numeric types: big integers (over 62 bits signed), rational
+numbers, complex numbers.
 
 Their associated procedures:
 - `numerator`, `denominator, `rationalize`
@@ -110,11 +111,15 @@ call came from. `e` and `n` show the environment (variables and
 values) at that call site. `?` lists more commands. `q` quits the
 debugger.
 
-You can drop into the debugger by choice in the middle of your code,
-by calling `(%avast)` or `(%avast value)`. The latter will print out
-the value before going into the debugger UI, and once you exit the
-debugger it will return this value as the value of the call. (I wanted
-a shorter word for this than 'breakpoint'.)
+### `(%avast value...)`
+
+You can drop into the debugger by choice anywhere in your code, by
+calling `(%avast)` or `(%avast value)`. This will print out the value
+(if supplied), then debug on this point in the computation (rather
+than on the last error as above); and once you exit the debugger it
+will return the same value as the value of the call.
+
+(Yes, that meant a 'breakpoint'.)
 
 ### `(%yo expression)`
 
