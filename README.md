@@ -94,7 +94,10 @@ be nicer to read, and maybe handy as a tractable personal programming
 environment.
 
 
-## Plans
+## How could this suck less?
 
-Next I intend to replace the conservative Boehm collector with a
-precise one.
+These would be nice:
+- Some fancier way to handle errors, possibly intercepting them.
+- Source-level debugging.
+- More-helpful errors from primitive procedures.
+- A precise GC in place of the conservative Boehm collector.

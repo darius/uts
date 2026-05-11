@@ -1,8 +1,11 @@
 # UTS User Guide
 
-This guide assumes you know [R4RS][1], and covers the particulars of `uts`.
+This guide assumes you know [R4RS][1], and covers the particulars of
+`uts`. If you're new to Scheme, I'm not up to date on any tutorials;
+maybe start with [scheme.org][2].
 
  [1]: https://standards.scheme.org/official/r4rs.pdf
+ [2]: https://www.scheme.org/
 
 ## OS command line
 
@@ -24,13 +27,24 @@ At the prompt `->` you enter an expression, then see its value:
 5
 ```
 
-TODO document REPL features:
-- ,commands
-- ctrl-d to exit
-- %, %%, %%% recent history
-- `cycle-write`
-- when value is `%void`, it's not written
+For some expressions, the value is unspecified by R4RS; for many of
+these UTS returns a special symbol called `%void`, and the REPL
+doesn't print it.
 
+The last three non-`%void` values are kept handy in the variables `%`,
+`%%`, and `%%%`.
+
+There are some shortcut commands starting with a comma. For instance,
+instead of entering `(load "foo.scm")` to load a source file:
+```
+-> ,l foo
+-> 
+```
+
+`,help` will show the full list of commands.
+
+To exit, enter the EOF character at your terminal (control-D in
+Unix). Or enter `(%exit 0)`.
 
 ## Differences from R4RS
 
@@ -81,19 +95,38 @@ What to do after `%error` complains to the user:
 
 ## Debugging
 
-TODO proper documentation
-- debugger
-- %avast
-- %yo
+At the REPL, the `,d` command starts the debugger on the last
+error. (Or call `(%debug)` for the same thing.)
 
-From the REPL after an error:
+In the debugger you explore the state at some point of a
+computation. Most often you start with a backtrace (the `b` command)
+showing the stack of pending non-tail calls, the most recent at
+bottom. (This is different from the backtraces in many languages
+because tail calls immediately drop the caller.) Then you might want
+`a` for the bytecode assembly showing just where the last non-tail
+call came from. `e` and `n` show the environment (variables and
+values) at that call site. `?` lists more commands. `q` quits the
+debugger.
 
-```scheme
-(%debug)              ; Enter the debugger
-(%disassemble proc)   ; Disassemble a procedure
+You can drop into the debugger by choice in the middle of your code,
+by calling `(%avast)` or `(%avast value)`. The latter will print out
+the value before going into the debugger UI, and once you exit the
+debugger it will return this value as the value of the call. (I wanted
+a shorter word for this than 'breakpoint'.)
+
+### `(%yo expression)`
+
+A crude convenience macro for "printf debugging". `(%yo expression)`
+evaluates just like `expression`, but also prints the value, like
+this:
 ```
-
-Debugger commands: `?` help, `b` backtrace, `u`/`d` up/down frames, `e` show environment, `q` quit.
+-> (define x 42)
+x
+-> (%yo x)
+[%yo x : 42]
+42
+-> 
+```
 
 ### `(%proceed value)`
 
@@ -107,6 +140,10 @@ not-a-pair
 -> (%proceed 42)
 43
 ```
+
+### `(%disassemble procedure)`
+
+Like the debugger's `a` command, this shows the bytecode assembly for `procedure`.
 
 ## Macros
 
@@ -193,7 +230,13 @@ overflow to a non-fixnum, in which case it will raise an error.
 
 ## Misc utilities
 
+### `(%cycle-write object)`
+
+The basic `(write object)` has trouble with a circular data structure:
+it never stops writing it. Use `cycle-write` instead to get a printed
+representation rendering the circular references similarly to Common
+Lisp. (TODO use this by default in the REPL and debugger?)
+
 ### `(%flush-input-line port)`
 
 Discard characters until end of line. Useful for recovering from parse errors in interactive use.
-
