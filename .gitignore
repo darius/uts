@@ -35,7 +35,7 @@ refs.text
 # Test scratch
 corpus/indent/test-round-trip.tmp
 corpus/miasma/c/asm.h
-corpus/ridarama/expanded/
+corpus/ridarama/expanded/*.scm
 test/tmp?
 
 # Claude
