@@ -1,8 +1,8 @@
 # UTS User Guide
 
-This guide assumes you know [R4RS][1], and covers the particulars of
-`uts`. If you're new to Scheme, I'm not up to date on any tutorials;
-maybe start with [scheme.org][2].
+This guide covers just the particulars of `uts`, assuming you know
+[R4RS][1]. If you're new to Scheme, I'm not up to date on any
+tutorials; maybe start with [scheme.org][2].
 
  [1]: https://standards.scheme.org/official/r4rs.pdf
  [2]: https://www.scheme.org/
@@ -10,7 +10,9 @@ maybe start with [scheme.org][2].
 ## OS command line
 
 If you run `uts` with no arguments, it enters a read-eval-print loop
-(REPL) -- see Quick Start in README.md.
+(REPL) -- see [Quick start][1].
+
+ [1]: README.md#quick-start
 
 If instead you run `uts filename.scm`, it loads and runs the Scheme
 source from `filename.scm`. If an error occurs, it prints the
