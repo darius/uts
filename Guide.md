@@ -10,9 +10,9 @@ tutorials; maybe start with [scheme.org][2].
 ## OS command line
 
 If you run `uts` with no arguments, it enters a read-eval-print loop
-(REPL) -- see [Quick start][1].
+(REPL) -- see [Quick start][3].
 
- [1]: README.md#quick-start
+ [3]: README.md#quick-start
 
 If instead you run `uts filename.scm`, it loads and runs the Scheme
 source from `filename.scm`. If an error occurs, it prints the
