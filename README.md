@@ -97,7 +97,7 @@ environment.
 ## How could this suck less?
 
 These would be nice:
-- Some fancier way to handle errors, possibly intercepting them.
+- Some reasonable way to intercept errors you want to intercept.
 - Source-level debugging.
 - More-helpful errors from primitive procedures.
 - A precise GC in place of the conservative Boehm collector.
