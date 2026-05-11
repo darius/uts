@@ -112,7 +112,8 @@ These would be nice:
 
 - Initial resurrection in 2026: Claude Opus 4.5. Fixed undefined
   behavior shown up by newer C compilers, converted to 64 bits,
-  overhauled configure/build/install, added tests and profiling,
-  other small improvements, helped with perf. Thanks, Claude!
+  overhauled configure/build/install, added tests/benchmarks/profiling
+  and the scripts for these, adapted the `corpus/` code as further
+  tests, other small improvements, helped with perf. Thanks, Claude!
 
 - Before and after: me, Darius
