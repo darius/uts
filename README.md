@@ -28,7 +28,7 @@ other Schemes, but I haven't tried that.
 
  [2]: https://cisco.github.io/ChezScheme/
  [3]: https://www.gnu.org/software/guile/
- [4]: blob/main/load-init.scm
+ [4]: load-init.scm
 
 The C code currently assumes 64 bits and a few other things more
 modern than the 90s original. Will document/improve later.
