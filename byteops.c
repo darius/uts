@@ -415,16 +415,17 @@ break; case bop_prim_1:
             {
                 // R4RS doesn't say how to round 0.5 here; this is convenient:
                 double d = floor (flonum_value (x0) + 0.5);
-                // Is d outside the fixnum range? NB the upper
-                // comparison is tricky because FIXNUM_MAX is not
-                // exactly representable as an IEEE double.
-                if (d < FIXNUM_MIN || d >= (FIXNUM_MAX+1))
+                // Is d in fixnum range? NB the upper comparison is
+                // tricky because FIXNUM_MAX is not exactly
+                // representable as an IEEE double.
+                if (FIXNUM_MIN <= d && d < (FIXNUM_MAX+1))
+                    acc = make_fixnum ((Fixnum) d);
+                else
                     {
                         acc = x0;
                         error_msg = "No exact number corresponding to";
                         goto vm_error_label;
                     }
-                acc = make_fixnum ((Fixnum) d);
             }
           else if (is_fixnum (x0))
               acc = x0;
