@@ -278,6 +278,9 @@
   (should-be "numstr.8" 42 (string->number "101010" 2))
   (should-be "numstr.9" 42 (string->number "52" 8))
   (should-be "numstr.10" 42 (string->number "2a" 16))
+  (should-be "numstr.11" "39U" (number->string 4242 36))
+  (should-be "numstr.12" 4242 (string->number "39u" 36))
+  (should-be "numstr.13" -1295 (string->number "-zz" 36))
 
   ;; === Flonum arithmetic ===
   (should-be "flo.1" 3.5 (+ 1.0 2.5))
