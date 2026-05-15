@@ -130,11 +130,6 @@ fi
   echo "GC_LIBS = $GC_LIBS"
 } > config.mk
 
-# Write uts script
-here="$(dirname "$(realpath "$0")")"
-echo ${here}/utsvm ${here}/uts.fasl '"$@"' >uts
-chmod +x uts
-
 echo ""
 echo "Configuration summary:"
 [ -n "$CC_RESULT" ] && echo "  CC:       $CC_RESULT"
