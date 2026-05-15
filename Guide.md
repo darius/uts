@@ -71,6 +71,21 @@ Other nonessentials omitted:
 - `transcript-on`, `transcript-off`
 - the macro appendix
 
+### Open-coding
+
+Unless you (set! %open-code-primitives? #f), many of the primitive
+procedures get compiled inline. (TODO document exactly where this
+happens) That is, mutating the definition of those procedures won't
+cause these cases of already-compiled code to call the new definition,
+as R4RS says it should.
+
+### No good excuse
+
+Inexact numbers might not be read and written to full precision, since
+this parsing/unparsing just calls on standard C library
+functions. (Maybe modern C gets this right! TODO find out)
+
+
 ### Additions
 
 Added functions will be listed below. They're generally named with a `%` prefix.
