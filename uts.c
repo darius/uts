@@ -1,9 +1,3 @@
-/*
-  Not being consistent about int vs. unsigned vs. size_t...
-
- */
-
-
 #include <gc.h>
 #include "config.h"
 
@@ -20,17 +14,17 @@
 
 #include "opcodes.h"
 
-static clock_t clock_start;	/* needed by (%runtime) */
+static clock_t clock_start;     /* needed by (%runtime) */
 
 
 typedef enum { false=0, true=1 } Flag;
 
 
-typedef enum 
+typedef enum
   {
     a_flonum, an_input_port, an_output_port, a_string,
     a_pair, a_closure, a_symbol, a_vector,
-    num_tags			/* not a real tag */
+    num_tags                    /* not a real tag */
   } 
 Tag;
 
@@ -57,7 +51,7 @@ typedef struct Object_header
 Object_header;
 
 typedef Object_header *Object;  /* A Scheme datum, or pointer thereto.
-				   The lower bits are tag bits, as follows: */
+                                   The lower bits are tag bits, as follows: */
 /*
    xxxxxxxx xxxxxxxx xxxxxxxx xxxxxx00   pointer
    xxxxxxxx xxxxxxxx xxxxxxxx xxxxxx01   fixnum
@@ -95,9 +89,9 @@ unreachable (void)
 }
 
 /* N.B. these would have to be thread-local */
-static jmp_buf		vm_error_catch_point;
-static const char *	vm_error_message;
-static Object 		vm_error_irritant;
+static jmp_buf          vm_error_catch_point;
+static const char *     vm_error_message;
+static Object           vm_error_irritant;
 
 static void 
 signal_vm_error (void)
@@ -158,7 +152,7 @@ tag (Object obj)            { return object_header (obj).tag; }
 
 #define obj_eof          ( (Object) 0x0000001b )
 #define nil              ( (Object) 0x0000003b )
-#define unbound		 ( (Object) 0x0000005b )
+#define unbound          ( (Object) 0x0000005b )
 #define obj_false        ( (Object) 0x0000000b )
 #define obj_true         ( (Object) 0x0000002b )
 
@@ -177,18 +171,18 @@ fast Object make_boolean (Flag flag) { return flag ? obj_true : obj_false; }
 
 fast Object make_char (Char c)       { return (Object) (((UWord)c << 4) | 0x03); }
 fast Char char_value (Object obj)    { assert (is_char (obj));
-				       return object_bits (obj) >> 4; }
+                                       return object_bits (obj) >> 4; }
 
 fast Object make_fixnum (Fixnum n)   { assert (int_is_fixnum (n));
                                        return (Object) (((UWord)n << 2) | 0x01); }
 fast Fixnum fixnum_value (Object obj){ assert (is_fixnum (obj));
-				       return ashr2 (object_bits (obj)); }
+                                       return ashr2 (object_bits (obj)); }
 
 
 fast Flag is_input_port (Object obj) { return is_boxed (obj)
-					&& tag (obj) == an_input_port; }
+                                        && tag (obj) == an_input_port; }
 fast Flag is_output_port (Object obj) { return is_boxed (obj)
-					 && tag (obj) == an_output_port; }
+                                         && tag (obj) == an_output_port; }
 
 fast Flag is_flonum (Object obj) {return is_boxed(obj) && tag(obj)==a_flonum;}
 fast Flag is_string (Object obj) {return is_boxed(obj) && tag(obj)==a_string;}
@@ -318,12 +312,12 @@ string_equal (Object str1, Object str2)
       return false;
     else 
       {
-	unsigned i;
-	const Char *s1 = string_ptr (str1), *s2 = string_ptr (str2);
-	for (i = 0; i < L; ++i)
-	  if (s1 [i] != s2 [i])
-	    return false;
-	return true;
+        unsigned i;
+        const Char *s1 = string_ptr (str1), *s2 = string_ptr (str2);
+        for (i = 0; i < L; ++i)
+          if (s1 [i] != s2 [i])
+            return false;
+        return true;
       }
   }
 }
@@ -365,7 +359,7 @@ static void
 close_port (Object port)
 {
   struct File_port *fp = port_ptr (port);
-  if (fp->is_open)		/* if not, is that an error? */
+  if (fp->is_open)              /* if not, is that an error? */
     fclose (fp->file);
   fp->is_open = false;
 }
@@ -400,7 +394,7 @@ object_to_c_string (char *buffer, size_t size, Object str)
       const char *s = string_cstr (str);
       char *d = buffer;
       for (; L != 0; ++s, ++d, --L)
-	*d = *s;
+        *d = *s;
       *d = '\0';
     }
 }
@@ -471,12 +465,12 @@ my_round (double x)
   if (f < 0) 
     {
       if (f < -0.5 || (f == -0.5 && modf (i * 0.5, &ignore) != 0))
-	i -= 1;
+        i -= 1;
     } 
   else 
     {
       if (0.5 < f || (f == 0.5 && modf (i * 0.5, &ignore) != 0))
-	i += 1;
+        i += 1;
     }
   return i;
 }
@@ -611,7 +605,7 @@ cdr (Object pair)
 }
 
 /* RECOVERABLE */
-static int			/* unsigned? */
+static int                      /* unsigned? */
 list_length (Object list)
 {
   Object ls = list;
@@ -645,9 +639,9 @@ assq (Object key, Object list)
     {
       Object pair = car (rest);
       if (!is_pair (pair))
-	vm_error ("Bad association list", list);
+        vm_error ("Bad association list", list);
       if (key == car (pair))
-	return pair;
+        return pair;
     }
   if (!is_null (rest))
     vm_error ("Improper list", list);
@@ -663,9 +657,9 @@ assv (Object key, Object list)
     {
       Object pair = car (rest);
       if (!is_pair (pair))
-	vm_error ("Bad association list", list);
+        vm_error ("Bad association list", list);
       if (eqv (key, car (pair)))
-	return pair;
+        return pair;
     }
   if (!is_null (rest))
     vm_error ("Improper list", list);
@@ -829,12 +823,12 @@ string_to_symbol (Object str)
     Object syms;
     for (syms = bucket; is_pair (syms); syms = cdr (syms)) 
       {
-	Object a = car (syms);
-	assert (is_symbol (a));
-	if (string_equal (str, symbol_to_string (a)))
-	  return a;
+        Object a = car (syms);
+        assert (is_symbol (a));
+        if (string_equal (str, symbol_to_string (a)))
+          return a;
       }
-    {	// TODO: optimize out this string_copy where you can...
+    {   // TODO: optimize out this string_copy where you can...
       Object sym = make_symbol (string_copy (str));
       vector_set (symbol_table, i, cons (sym, bucket));
       return sym;
@@ -875,11 +869,11 @@ skip_blanks (FILE *in)
   for (;;) 
     {
       while (isspace (c))
-	c = getc (in);
+        c = getc (in);
       if (c != ';')
-	break;
+        break;
       do
-	c = getc (in);
+        c = getc (in);
       while (c != '\n' && c != EOF);
     }
 
@@ -896,13 +890,13 @@ flush_input_line (FILE *in)
     {
       int c = getc (in);
       if (c == '\n')
-	return;
+        return;
       if (c == EOF) 
-	{
-	  if (ferror (in))
-	    vm_error ("I/O error on input", nil); /* need the port! */
-	  return;
-	}
+        {
+          if (ferror (in))
+            vm_error ("I/O error on input", nil); /* need the port! */
+          return;
+        }
     }
 }
 
@@ -918,11 +912,11 @@ convert_digit (char c, int radix)
     {
       char C = toupper (c);
       if (C < 'A')
-	return -1;
+        return -1;
       if (C <= 'Z')
-	i = C - 'A' + 10;
+        i = C - 'A' + 10;
       else
-	return -1;
+        return -1;
     }
   return i < radix ? i : -1;
 }
@@ -932,33 +926,33 @@ string_to_number (Object str, unsigned radix)
 {
   /* The grammar for real numbers, where R is the radix, from R4RS:
 
-     num[R]:		whitespace* prefix[R] real[R] whitespace*
-     prefix[R]: 	r[R] exactness | exactness r[R]
+     num[R]:            whitespace* prefix[R] real[R] whitespace*
+     prefix[R]:         r[R] exactness | exactness r[R]
 
-     real[R]:		sign ureal[R]
-     ureal[R]:		uint[R] | decimal[R]
-     uint[R]:		d[R]+ #*
-     decimal[10]:	d[10]+                suffix
-		      |           . d[10]+ #* suffix
-		      | d[10+     . d[10]* #* suffix
-		      | d[10]+ #+ .        #* suffix
-     suffix:		'' | exp-marker sign d[10]+
-     exp-marker: 	e | s | f | d | l
+     real[R]:           sign ureal[R]
+     ureal[R]:          uint[R] | decimal[R]
+     uint[R]:           d[R]+ #*
+     decimal[10]:       d[10]+                suffix
+                      |           . d[10]+ #* suffix
+                      | d[10+     . d[10]* #* suffix
+                      | d[10]+ #+ .        #* suffix
+     suffix:            '' | exp-marker sign d[10]+
+     exp-marker:        e | s | f | d | l
 
-     sign: 		'' | '+' | -
-     exactness: 	'' | # i | # e
-     r[2]:		# b
-     r[8]:		# o
-     r[10]:		'' | # d
-     r[16]:		# x
-     d[R]:		<digit of radix R>
+     sign:              '' | '+' | -
+     exactness:         '' | # i | # e
+     r[2]:              # b
+     r[8]:              # o
+     r[10]:             '' | # d
+     r[16]:             # x
+     d[R]:              <digit of radix R>
    */
 
   const char *s = string_cstr (str);
   int n = string_length (str);
   char buffer[UNPARSED_FLONUM_SIZE + 1], *buf = buffer;
-  int i = 0;			/* index of next char in str */
-  char c;			/* current char in str */
+  int i = 0;                    /* index of next char in str */
+  char c;                       /* current char in str */
 
   Flag is_exact = true;
   Flag expect_exact = true;
@@ -981,163 +975,163 @@ string_to_number (Object str, unsigned radix)
     Flag saw_radix_prefix = false;
     while (c == '#') 
       {
-	if (i == n) return obj_false;
-	c = tolower (s [i++]);
-	switch (c) 
-	  {
-	  case 'i':
-	  case 'e':
-	    if (saw_exactness_prefix) return obj_false;
-	    saw_exactness_prefix = true;
-	    is_exact = expect_exact = (c == 'e');
-	    break;
-	  case 'b':
-	  case 'o':
-	  case 'd':
-	  case 'x':
-	    if (saw_radix_prefix) return obj_false;
-	    saw_radix_prefix = true;
-	    radix = (c == 'b' ? 2 : c == 'o' ? 8 : c == 'd' ? 10 : 16);
-	    break;
-	  default:
-	    return obj_false;
-	  }
-	if (i == n) return obj_false;
-	c = s [i++];
+        if (i == n) return obj_false;
+        c = tolower (s [i++]);
+        switch (c) 
+          {
+          case 'i':
+          case 'e':
+            if (saw_exactness_prefix) return obj_false;
+            saw_exactness_prefix = true;
+            is_exact = expect_exact = (c == 'e');
+            break;
+          case 'b':
+          case 'o':
+          case 'd':
+          case 'x':
+            if (saw_radix_prefix) return obj_false;
+            saw_radix_prefix = true;
+            radix = (c == 'b' ? 2 : c == 'o' ? 8 : c == 'd' ? 10 : 16);
+            break;
+          default:
+            return obj_false;
+          }
+        if (i == n) return obj_false;
+        c = s [i++];
       }
   }
 
   if (radix < 2 || 36 < radix)
-    return obj_false;	/* or is this an error? */
+    return obj_false;   /* or is this an error? */
 
   if (c == '+' || c == '-') 
     {
       if (c == '-')
-	*buf++ = c;
+        *buf++ = c;
       if (i == n) return obj_false;
       c = s [i++];
     }
   
   if (radix != 10) 
-    {		/* integers only, possibly inexact */
+    {           /* integers only, possibly inexact */
       if (convert_digit (c, radix) == -1)
-	return obj_false;
+        return obj_false;
       *buf++ = c;
       while (i < n) 
-	{
-	  c = s [i++];
-	  if (convert_digit (c, radix) != -1)
-	    *buf++ = c;
-	  else if (c == '#') 
-	    {
-	      is_exact = false;
-	      *buf++ = '0';
-	      while (i < n) 
-		{
-		  c = s [i++];
-		  if (c != '#') 
-		    {
-		      --i;
-		      break;
-		    }
-		  *buf++ = '0';
-		}
-	      break;
-	    } 
-	  else 
-	    {
-	      --i;
-	      break;
-	    }
-	}
+        {
+          c = s [i++];
+          if (convert_digit (c, radix) != -1)
+            *buf++ = c;
+          else if (c == '#') 
+            {
+              is_exact = false;
+              *buf++ = '0';
+              while (i < n) 
+                {
+                  c = s [i++];
+                  if (c != '#') 
+                    {
+                      --i;
+                      break;
+                    }
+                  *buf++ = '0';
+                }
+              break;
+            } 
+          else 
+            {
+              --i;
+              break;
+            }
+        }
     } 
   else 
-    {			/* radix = 10, floats allowed */
+    {                   /* radix = 10, floats allowed */
       /*
-	uint[R]:		d[R]+ #*
-	decimal[10]:	        d[10]+                suffix
-	          |           . d[10]+ #* suffix
-	          | d[10+     . d[10]* #* suffix
-	          | d[10]+ #+ .        #* suffix
-	*/
+        uint[R]:                d[R]+ #*
+        decimal[10]:            d[10]+                suffix
+                  |           . d[10]+ #* suffix
+                  | d[10+     . d[10]* #* suffix
+                  | d[10]+ #+ .        #* suffix
+        */
       {
-	Flag digits_allowed = true, digits_required = true;
-	while (isdigit (c)) 
-	  {
-	    digits_required = false;
-	    *buf++ = c;
-	    if (i == n) goto scan_real_done;
-	    c = s [i++];
-	  }
-	if (!digits_required) 
-	  while (c == '#') 
-	    {
-	      is_exact = false;
-	      digits_allowed = false;
-	      *buf++ = '0';
-	      if (i == n) goto scan_real_done;
-	      c = s [i++];
-	    }
-	if (c == '.') 
-	  {
-	    is_exact = false;
-	    *buf++ = c;
-	    if (i == n) 
-	      {
-		if (digits_required)
-		  return obj_false;
-		goto scan_real_done;
-	      }
-	    c = s [i++];
-	    if (digits_required && !isdigit (c))
-	      return obj_false;
-	    if (digits_allowed) 
-	      {
-		while (isdigit (c)) 
-		  {
-		    *buf++ = c;
-		    if (i == n) goto scan_real_done;
-		    c = s [i++];
-		  }
-	      }
-	    while (c == '#') 
-	      {
-		if (i == n) goto scan_real_done;
-		c = s [i++];
-	      }
-	  } 
-	else if (digits_required)
-	  return obj_false;
-	/*
-	  suffix:	'' | exp-marker sign d[10]+
-	  exp-marker: 	e | s | f | d | l
-	  */
-	if (strchr ("esfdlESFDL", c))
-	  {
-	    is_exact = false;
-	    *buf++ = 'e';
-	    if (i == n) return obj_false;
-	    c = s [i++];
-	    if (c == '+' || c == '-') 
-	      {
-		if (c == '-') 
-		  *buf++ = c;
-		if (i == n) return obj_false;
-		c = s [i++];
-	      }
-	    if (!isdigit (c))
-	      return obj_false;
-	    *buf++ = c;
-	    while (i < n) 
-	      {
-		c = s [i++];
-		if (!isdigit (c))
-		  break;
-		*buf++ = c;
-	      }
-	  } 
-	else
-	  --i;
+        Flag digits_allowed = true, digits_required = true;
+        while (isdigit (c)) 
+          {
+            digits_required = false;
+            *buf++ = c;
+            if (i == n) goto scan_real_done;
+            c = s [i++];
+          }
+        if (!digits_required) 
+          while (c == '#') 
+            {
+              is_exact = false;
+              digits_allowed = false;
+              *buf++ = '0';
+              if (i == n) goto scan_real_done;
+              c = s [i++];
+            }
+        if (c == '.') 
+          {
+            is_exact = false;
+            *buf++ = c;
+            if (i == n) 
+              {
+                if (digits_required)
+                  return obj_false;
+                goto scan_real_done;
+              }
+            c = s [i++];
+            if (digits_required && !isdigit (c))
+              return obj_false;
+            if (digits_allowed) 
+              {
+                while (isdigit (c)) 
+                  {
+                    *buf++ = c;
+                    if (i == n) goto scan_real_done;
+                    c = s [i++];
+                  }
+              }
+            while (c == '#') 
+              {
+                if (i == n) goto scan_real_done;
+                c = s [i++];
+              }
+          } 
+        else if (digits_required)
+          return obj_false;
+        /*
+          suffix:       '' | exp-marker sign d[10]+
+          exp-marker:   e | s | f | d | l
+          */
+        if (strchr ("esfdlESFDL", c))
+          {
+            is_exact = false;
+            *buf++ = 'e';
+            if (i == n) return obj_false;
+            c = s [i++];
+            if (c == '+' || c == '-') 
+              {
+                if (c == '-') 
+                  *buf++ = c;
+                if (i == n) return obj_false;
+                c = s [i++];
+              }
+            if (!isdigit (c))
+              return obj_false;
+            *buf++ = c;
+            while (i < n) 
+              {
+                c = s [i++];
+                if (!isdigit (c))
+                  break;
+                *buf++ = c;
+              }
+          } 
+        else
+          --i;
       }
     }
   
@@ -1163,16 +1157,16 @@ scan_real_done:
       char *end;
       long long i = (errno = 0, strtoll (buffer, &end, radix));
       if (errno == 0 && *end == '\0')
-	{
-	  if (int_is_fixnum (i) && is_exact)
-	    return make_fixnum (i);
-	  else if (saw_exactness_prefix && is_exact)
-	    return obj_false;
-	  else
-	    return make_flonum ((double) i);
-	}
+        {
+          if (int_is_fixnum (i) && is_exact)
+            return make_fixnum (i);
+          else if (saw_exactness_prefix && is_exact)
+            return obj_false;
+          else
+            return make_flonum ((double) i);
+        }
       if ((saw_exactness_prefix && is_exact) || radix != 10)
-	return obj_false;
+        return obj_false;
       /* else fall through */
     }
   {
@@ -1200,10 +1194,10 @@ unparse_int (char *buffer, Fixnum n, unsigned radix)
       *--sp = '0';
     else
       for (; u != 0; u /= radix)
-	{
-	  unsigned digit = u % radix;
-	  *--sp = (digit < 10 ? '0' + digit : 'A' - 10 + digit);
-	}
+        {
+          unsigned digit = u % radix;
+          *--sp = (digit < 10 ? '0' + digit : 'A' - 10 + digit);
+        }
 
     /* Now stick them in the buffer: */
     memcpy (buffer, sp, (stack + 65) - sp);
@@ -1216,13 +1210,13 @@ static void
 unparse_flonum (char *buf, Object num)
 {
   sprintf (buf, "%.16g", flonum_value (num));
-  {				/* Add a decimal point if necessary */
+  {                             /* Add a decimal point if necessary */
     char *b = (*buf == '-' ? buf+1 : buf);
     size_t off = strspn (b, "0123456789");
     if ('\0' == b [off]) 
       {
-	b [off] = '.';
-	b [off+1] = '\0';
+        b [off] = '.';
+        b [off+1] = '\0';
       }
   }
 }
@@ -1237,13 +1231,13 @@ number_to_string (Object num, unsigned radix)
   if (is_fixnum (num)) 
     {
       if (!(2 <= radix && radix <= 36))
-	vm_error ("Unsupported radix", make_fixnum (radix));
+        vm_error ("Unsupported radix", make_fixnum (radix));
       unparse_int (buf, fixnum_value (num), radix);
     } 
   else if (is_flonum (num)) 
     {
       if (radix != 10)
-	vm_error ("Unsupported radix", make_fixnum (radix));
+        vm_error ("Unsupported radix", make_fixnum (radix));
       unparse_flonum (buf, num);
     } 
   else
@@ -1264,37 +1258,37 @@ read_atom (FILE *in, int c)
     {
       c = getc (in);
       switch (c) 
-	{
-	case EOF:
-	  if (ferror (in)) 
-	    {
-	      if (errno == EINTR)	/* boy is this annoying */
-		break;
-	      io_error (errno);
-	    }
-	  goto done;
+        {
+        case EOF:
+          if (ferror (in)) 
+            {
+              if (errno == EINTR)       /* boy is this annoying */
+                break;
+              io_error (errno);
+            }
+          goto done;
 
-	case '(': case ')': case ';': 
-	case '"': case '`': case ',': case '@':
-	  ungetc (c, in);
-	  goto done;
+        case '(': case ')': case ';': 
+        case '"': case '`': case ',': case '@':
+          ungetc (c, in);
+          goto done;
 
-	default:
-	  if (isspace (c)) 
-	    {
-	      ungetc (c, in);
-	      goto done;
-	    }
-	  if (buf + sizeof buf - 1 <= b)
-	    fatal_error ("Buffer overflow"); /* FIXME: hard limit */
-	  *b++ = tolower (c);
-	}
+        default:
+          if (isspace (c)) 
+            {
+              ungetc (c, in);
+              goto done;
+            }
+          if (buf + sizeof buf - 1 <= b)
+            fatal_error ("Buffer overflow"); /* FIXME: hard limit */
+          *b++ = tolower (c);
+        }
     }
 
 done:
   *b = '\0';
   {
-    Object s = c_string (buf);	// TODO define string_to_number in terms
+    Object s = c_string (buf);  // TODO define string_to_number in terms
                                 // of a c_string_to_number not on the heap
     Object n = string_to_number (s, 10);
     return is_true (n) ? n : string_to_symbol (s);
@@ -1324,7 +1318,7 @@ as_int (Object n)
       double d = flonum_value (n);
       /* Check range before casting to avoid UB */
       if (d < INT_MIN || d > INT_MAX || d != floor(d))
-	vm_error ("Not an integer", n);
+        vm_error ("Not an integer", n);
       return (int) d;
     }
   if (!is_fixnum (n))
@@ -1354,7 +1348,7 @@ division_by_zero (void)
 static void 
 divide_inexact (double *quot, double *rem, double n, double d)
 {
-  if (d == 0)		/* what about 0 % 0? */
+  if (d == 0)           /* what about 0 % 0? */
     division_by_zero ();
   {
     double foo;
@@ -1373,13 +1367,13 @@ modulo (Object n, Object d)
   if (is_fixnum (n) && is_fixnum (d))
     {
       if (fixnum_value (d) == 0)
-	division_by_zero ();
+        division_by_zero ();
       {
-	Fixnum dv = fixnum_value (d);
-	Fixnum r = REMAINDER (fixnum_value (n), dv);
-	if (dv < 0 ? 0 < r : r < 0)
-	  r += dv;
-	return int_is_fixnum (r) ? make_fixnum (r) : make_flonum (r);
+        Fixnum dv = fixnum_value (d);
+        Fixnum r = REMAINDER (fixnum_value (n), dv);
+        if (dv < 0 ? 0 < r : r < 0)
+          r += dv;
+        return int_is_fixnum (r) ? make_fixnum (r) : make_flonum (r);
       }
     }
   else
@@ -1387,7 +1381,7 @@ modulo (Object n, Object d)
       double q, r, dv = as_double (d);
       divide_inexact (&q, &r, as_double (n), dv);
       if (dv < 0 ? 0 < r : r < 0)
-	r += dv;
+        r += dv;
       return make_flonum (r);
     }
 }
@@ -1399,10 +1393,10 @@ my_remainder (Object n, Object d)
   if (is_fixnum (n) && is_fixnum (d))
     {
       if (fixnum_value (d) == 0)
-	division_by_zero ();
+        division_by_zero ();
       {
-	Fixnum r = REMAINDER (fixnum_value (n), fixnum_value (d));
-	return int_is_fixnum (r) ? make_fixnum (r) : make_flonum (r);
+        Fixnum r = REMAINDER (fixnum_value (n), fixnum_value (d));
+        return int_is_fixnum (r) ? make_fixnum (r) : make_flonum (r);
       }
     }
   else
@@ -1420,10 +1414,10 @@ quotient (Object n, Object d)
   if (is_fixnum (n) && is_fixnum (d))
     {
       if (fixnum_value (d) == 0)
-	division_by_zero ();
+        division_by_zero ();
       {
-	Fixnum r = QUOTIENT (fixnum_value (n), fixnum_value (d));
-	return int_is_fixnum (r) ? make_fixnum (r) : make_flonum (r);
+        Fixnum r = QUOTIENT (fixnum_value (n), fixnum_value (d));
+        return int_is_fixnum (r) ? make_fixnum (r) : make_flonum (r);
       }
     }
   else
@@ -1443,9 +1437,9 @@ multiply (Object n1, Object n2)
       Fixnum i1 = fixnum_value (n1), i2 = fixnum_value (n2);
       __int128 product = (__int128) i1 * (__int128) i2;
       if (product >= FIXNUM_MIN && product <= FIXNUM_MAX)
-	return make_fixnum ((Fixnum) product);
+        return make_fixnum ((Fixnum) product);
       else
-	return make_flonum ((double) product);
+        return make_flonum ((double) product);
     } else
       return make_flonum (as_double (n1) * as_double (n2));
 }
@@ -1458,7 +1452,7 @@ divide (Object n1, Object n2)
     {
       int i1 = fixnum_value (n1), i2 = fixnum_value (n2);
       if (i2 == 0)
-	division_by_zero ();
+        division_by_zero ();
       return i1 % i2 == 0 ? make_fixnum (i1 / i2) 
                           : make_flonum ((double) i1 / i2);
     } 
@@ -1466,7 +1460,7 @@ divide (Object n1, Object n2)
     {
       double d2 = as_double (n2);
       if (d2 == 0)
-	division_by_zero ();
+        division_by_zero ();
       return make_flonum (as_double (n1) / d2);
     }
 }
@@ -1485,12 +1479,12 @@ write_string (FILE *file, Object str)
     {
       char c = s [i];
       if (c == '"' || c == '\\')
-	put_char ('\\', file);
+        put_char ('\\', file);
       if (isprint (c))
-	put_char (c, file);
+        put_char (c, file);
       else
-	if (fprintf (file, "\\%03o", c) < 0)
-	  io_error (errno);
+        if (fprintf (file, "\\%03o", c) < 0)
+          io_error (errno);
     }
   put_char ('"', file);
 }
@@ -1501,135 +1495,135 @@ put_object (FILE *file, Object obj, Flag displaying)
   if (!is_boxed (obj)) 
     {
       if (is_fixnum (obj))
-	{
-	  if (fprintf (file, "%lld", (long long) fixnum_value (obj)) < 0)
-	    io_error (errno);
-	}
+        {
+          if (fprintf (file, "%lld", (long long) fixnum_value (obj)) < 0)
+            io_error (errno);
+        }
       else if (is_null (obj))
-	put_string ("()", file);
+        put_string ("()", file);
       else if (is_boolean (obj))
-	put_string (is_true (obj) ? "#t" : "#f", file);
+        put_string (is_true (obj) ? "#t" : "#f", file);
       else if (is_eof_object (obj))
-	put_string ("#!eof", file);
+        put_string ("#!eof", file);
       else if (is_unbound (obj))
-	put_string ("#!unbound", file);
+        put_string ("#!unbound", file);
       else if (is_char (obj)) 
-	{
-	  char c = char_value (obj);
-	  if (displaying)
-	    put_char (c, file);
-	  else
-	    {
-	      put_string ("#\\", file);
-	      if (isgraph (c))
-		put_char (c, file);
-	      else 
-		{
-		  const char *name;
-		  switch (c) 
-		    {
-		    case ' ':  name = "space";   goto named;
-		    case '\t': name = "tab";     goto named;
-		    case '\n': name = "newline"; goto named;
-		    case '\r': name = "return";  goto named;
-		    named:
-		    put_string (name, file);
-		    break;
-		    default: 
-		      /* FIXME: get reader to understand this */
-		      if (fprintf (file, "\\%03o", c & 0xff) < 0)
-			io_error (errno);
-		      break;
-		    }
-		}
-	    }
-	} 
+        {
+          char c = char_value (obj);
+          if (displaying)
+            put_char (c, file);
+          else
+            {
+              put_string ("#\\", file);
+              if (isgraph (c))
+                put_char (c, file);
+              else 
+                {
+                  const char *name;
+                  switch (c) 
+                    {
+                    case ' ':  name = "space";   goto named;
+                    case '\t': name = "tab";     goto named;
+                    case '\n': name = "newline"; goto named;
+                    case '\r': name = "return";  goto named;
+                    named:
+                    put_string (name, file);
+                    break;
+                    default: 
+                      /* FIXME: get reader to understand this */
+                      if (fprintf (file, "\\%03o", c & 0xff) < 0)
+                        io_error (errno);
+                      break;
+                    }
+                }
+            }
+        } 
       else
-	unreachable ();
+        unreachable ();
     } 
-  else				/* is_boxed (obj) */
+  else                          /* is_boxed (obj) */
     {
       switch (object_tag (obj)) 
-	{
-	case a_flonum:
-	  {
-	    char buf[UNPARSED_FLONUM_SIZE + 1];
-	    unparse_flonum (buf, obj);
-	    put_string (buf, file);
-	    break;
-	  }
-	case a_string:
-	  if (displaying)
-	    display_string (obj, file);
-	  else
-	    write_string (file, obj);
-	  break;
-	case a_symbol: 
-	  /* FIXME: backslashify if necessary */
-	  display_string (symbol_to_string (obj), file);
-	  break;
-	case an_input_port:
-	  put_string ("#<input port>", file);
-	  break;
-	case an_output_port:
-	  put_string ("#<output port>", file);
-	  break;
-	case a_closure:
-	  {
-	    Object code = closure_code (obj);
-	    Object name = nil;
-	    if (is_vector (code) && vector_length (code) == 6) // TODO obscure
-	      name = vector_ref (code, 3);
-	    put_string ("#<procedure", file);
-	    put_char (' ', file);
+        {
+        case a_flonum:
+          {
+            char buf[UNPARSED_FLONUM_SIZE + 1];
+            unparse_flonum (buf, obj);
+            put_string (buf, file);
+            break;
+          }
+        case a_string:
+          if (displaying)
+            display_string (obj, file);
+          else
+            write_string (file, obj);
+          break;
+        case a_symbol: 
+          /* FIXME: backslashify if necessary */
+          display_string (symbol_to_string (obj), file);
+          break;
+        case an_input_port:
+          put_string ("#<input port>", file);
+          break;
+        case an_output_port:
+          put_string ("#<output port>", file);
+          break;
+        case a_closure:
+          {
+            Object code = closure_code (obj);
+            Object name = nil;
+            if (is_vector (code) && vector_length (code) == 6) // TODO obscure
+              name = vector_ref (code, 3);
+            put_string ("#<procedure", file);
+            put_char (' ', file);
             for (; is_pair (name); name = cdr (name))
               { /* display a nested procedure name like #<procedure inner,outer> */
                 put_object (file, car (name), false);
                 put_char (',', file);
               }
-	    put_object (file, name, false);
-	    put_char ('>', file);
-	    break;
-	  }
-	case a_pair:
-	  put_char ('(', file);
-	  put_object (file, car (obj), displaying);
-	  for (;;) 
-	    {
-	      obj = cdr (obj);
-	      if (is_pair (obj)) 
-		{
-		  put_char (' ', file);
-		  put_object (file, car (obj), displaying);
-		} 
-	      else 
-		{
-		  if (obj != nil) 
-		    {
-		      put_string (" . ", file);
-		      put_object (file, obj, displaying);
-		    }
-		  break;
-		}
-	    }
-	  put_char (')', file);
-	  break;
-	case a_vector:
-	  put_string ("#(", file);
-	  {
-	    int i;
-	    for (i = 0; i < vector_length (obj); ++i) 
-	      {
-		if (i != 0)
-		  put_char (' ', file);
-		put_object (file, vector_ref (obj, i), displaying);
-	      }
-	  }
-	  put_char (')', file);
-	  break;
-	default:
-	  unreachable ();
-	}
+            put_object (file, name, false);
+            put_char ('>', file);
+            break;
+          }
+        case a_pair:
+          put_char ('(', file);
+          put_object (file, car (obj), displaying);
+          for (;;) 
+            {
+              obj = cdr (obj);
+              if (is_pair (obj)) 
+                {
+                  put_char (' ', file);
+                  put_object (file, car (obj), displaying);
+                } 
+              else 
+                {
+                  if (obj != nil) 
+                    {
+                      put_string (" . ", file);
+                      put_object (file, obj, displaying);
+                    }
+                  break;
+                }
+            }
+          put_char (')', file);
+          break;
+        case a_vector:
+          put_string ("#(", file);
+          {
+            int i;
+            for (i = 0; i < vector_length (obj); ++i) 
+              {
+                if (i != 0)
+                  put_char (' ', file);
+                put_object (file, vector_ref (obj, i), displaying);
+              }
+          }
+          put_char (')', file);
+          break;
+        default:
+          unreachable ();
+        }
     }
 }
 
@@ -1692,17 +1686,17 @@ undump_string (void)
 
 #define STACK_SIZE 1000
 
-#define PUSH(x) do { 			\
-	if (STACK_SIZE <= sp)		\
-	  stack_error ();		\
-	stack_base [sp++] = (x);	\
-	        } while (0)
+#define PUSH(x) do {                    \
+        if (STACK_SIZE <= sp)           \
+          stack_error ();               \
+        stack_base [sp++] = (x);        \
+                } while (0)
 
-#define POP(x) do { 			\
-	if (sp < 0)			\
-	  stack_error ();		\
-	(x) = stack_base [--sp];	\
-	       } while (0)
+#define POP(x) do {                     \
+        if (sp < 0)                     \
+          stack_error ();               \
+        (x) = stack_base [--sp];        \
+               } while (0)
 
 static void
 stack_error (void)
@@ -1716,7 +1710,7 @@ read_fasl (void)
 {
   Object fasl_stack = make_vector (STACK_SIZE, nil);
   Object *stack_base = vector_ptr (fasl_stack);
-  int sp = 0;			/* stack pointer */
+  int sp = 0;                   /* stack pointer */
 
   Object o1 = nil, o2 = nil, o3 = nil;
 
@@ -1729,58 +1723,58 @@ read_fasl (void)
     {
       int tag = fasl_next ();
       switch (tag) 
-	{
-	default:
-	  vm_error ("Unrecognized tag", make_fixnum (tag));
-	break; case ini_cons: 
-	  POP (o1);
-	  POP (o2);
+        {
+        default:
+          vm_error ("Unrecognized tag", make_fixnum (tag));
+        break; case ini_cons: 
+          POP (o1);
+          POP (o2);
           o3 = cons (o1, o2);
           if (nseen < max_seen) vector_set (seen_vector, nseen++, o3);
-	  PUSH (o3);
+          PUSH (o3);
         break; case ini_ref:
           {
             int i = read_int ();
             if (i < 0 || nseen <= i) vm_error ("=ref out of range", make_fixnum (i));
             PUSH (vector_ref (seen_vector, i));
           }
-	break; case ini_vector: 
-	  {
-	    int i, n = read_int ();
-	    Object vec = make_vector (n, nil);
-	    Object *v = vector_ptr (vec);
-	    for (i = 0; i < n; ++i)
-	      POP (v [i]);
-	    PUSH (vec);
-	  }
-	break; case ini_closure:
-	  POP (o1);
-	  POP (o2);
-	  PUSH (make_closure (o1, o2));
-	break; case ini_symbol: 
-	  {
-	    int i, n = read_int ();
-	    Object str = make_string (n);
-	    unsigned char *s = string_ptr (str);
-	    for (i = 0; i < n; ++i)
-	      s [i] = tolower (read_unsigned8 ());
-	    o3 = string_to_symbol (str);
-	    PUSH (o3);
+        break; case ini_vector: 
+          {
+            int i, n = read_int ();
+            Object vec = make_vector (n, nil);
+            Object *v = vector_ptr (vec);
+            for (i = 0; i < n; ++i)
+              POP (v [i]);
+            PUSH (vec);
+          }
+        break; case ini_closure:
+          POP (o1);
+          POP (o2);
+          PUSH (make_closure (o1, o2));
+        break; case ini_symbol: 
+          {
+            int i, n = read_int ();
+            Object str = make_string (n);
+            unsigned char *s = string_ptr (str);
+            for (i = 0; i < n; ++i)
+              s [i] = tolower (read_unsigned8 ());
+            o3 = string_to_symbol (str);
+            PUSH (o3);
             if (nseen < max_seen) vector_set (seen_vector, nseen++, o3);
-	  }
-	break; case ini_nil:
-	  PUSH (nil);
-	break; case ini_int:
-	  PUSH (make_fixnum (read_int ()));
-	break; case ini_true: 
+          }
+        break; case ini_nil:
+          PUSH (nil);
+        break; case ini_int:
+          PUSH (make_fixnum (read_int ()));
+        break; case ini_true: 
           PUSH (obj_true);
-	break; case ini_false: 
+        break; case ini_false: 
           PUSH (obj_false);
-	break; case ini_string:
-	  PUSH (undump_string ());
-	break; case ini_char:
-	  PUSH (make_char ((char) read_unsigned8 ()));
-	}
+        break; case ini_string:
+          PUSH (undump_string ());
+        break; case ini_char:
+          PUSH (make_char ((char) read_unsigned8 ()));
+        }
     }
   if (sp == 1)
     {
@@ -1874,14 +1868,14 @@ expt (Object x1, Object x0)
     return make_flonum (p);
   } else
     return make_flonum (pow (as_double (x1),
-			     as_double (x0)));
+                             as_double (x0)));
 }
 
 static Object
 prim_atan (Object x1, Object x0)
 {
   return make_flonum (atan2 (as_double (x1),
-			     as_double (x0))); 
+                             as_double (x0))); 
 }
 
 static Object
@@ -2015,57 +2009,57 @@ typedef struct Interpreter {
 } Interpreter;
 
 
-#define stack_limit	VM_STACK_SIZE
-#define top() 		(stack[stack_ptr - 1])
-#define set_top(x)	(stack[stack_ptr - 1] = (x))
-#define pop()		(stack[--stack_ptr])
-#define drop()		(--stack_ptr)
-#define push(x)		(stack[stack_ptr++] = (x))
+#define stack_limit     VM_STACK_SIZE
+#define top()           (stack[stack_ptr - 1])
+#define set_top(x)      (stack[stack_ptr - 1] = (x))
+#define pop()           (stack[--stack_ptr])
+#define drop()          (--stack_ptr)
+#define push(x)         (stack[stack_ptr++] = (x))
 
-#define need(n)		do { 					\
-			  if (stack_limit <= stack_ptr + (n))	\
-			    goto stack_overflow;		\
-			} while (0)
+#define need(n)         do {                                    \
+                          if (stack_limit <= stack_ptr + (n))   \
+                            goto stack_overflow;                \
+                        } while (0)
 
 /* need error checks on these... */
 
-#define get_byte()	(bvec[pc++])
-#define get_short()	(pc += 2, (bvec[pc-2]) * 256 + (bvec[pc-1]))
-#define get_datum()	(constants[get_byte()])
+#define get_byte()      (bvec[pc++])
+#define get_short()     (pc += 2, (bvec[pc-2]) * 256 + (bvec[pc-1]))
+#define get_datum()     (constants[get_byte()])
 
-#define save_state(scode, senv, soffset)	\
-  do {    					\
-    Object code_ = (scode);			\
-    Object renv_ = (senv);			\
-    int offset_ = (soffset);			\
-    need (4);					\
-    push (make_fixnum (offset_));		\
-    push (code_);				\
-    push (renv_);				\
-    push (make_fixnum (frame_ptr));		\
-    frame_ptr = stack_ptr;			\
+#define save_state(scode, senv, soffset)        \
+  do {                                          \
+    Object code_ = (scode);                     \
+    Object renv_ = (senv);                      \
+    int offset_ = (soffset);                    \
+    need (4);                                   \
+    push (make_fixnum (offset_));               \
+    push (code_);                               \
+    push (renv_);                               \
+    push (make_fixnum (frame_ptr));             \
+    frame_ptr = stack_ptr;                      \
   } while (0)
 
-#define restore_state()				\
-  do {    					\
-    assert (stack_ptr == frame_ptr);		\
-    frame_ptr = fixnum_value (pop ());		\
-    assert (is_vector (top ()));		\
-    renv = pop ();				\
-    assert (is_vector (top ()));		\
-    code = pop ();				\
-    bvec = string_ptr (vector_ref (code, 2));	\
+#define restore_state()                         \
+  do {                                          \
+    assert (stack_ptr == frame_ptr);            \
+    frame_ptr = fixnum_value (pop ());          \
+    assert (is_vector (top ()));                \
+    renv = pop ();                              \
+    assert (is_vector (top ()));                \
+    code = pop ();                              \
+    bvec = string_ptr (vector_ref (code, 2));   \
     constants = vector_ptr (vector_ref (code, 1)); \
-    pc = fixnum_value (pop ());			\
+    pc = fixnum_value (pop ());                 \
   } while (0)
 
-#define flush_registers()			\
-  do {    					\
-    interp->code      = code;			\
-    interp->renv      = renv;		        \
-    interp->pc        = pc;			\
-    interp->stack_ptr = stack_ptr;		\
-    interp->frame_ptr = frame_ptr;		\
+#define flush_registers()                       \
+  do {                                          \
+    interp->code      = code;                   \
+    interp->renv      = renv;                   \
+    interp->pc        = pc;                     \
+    interp->stack_ptr = stack_ptr;              \
+    interp->frame_ptr = frame_ptr;              \
   } while (0)
 
 typedef Object (*callout1_t) (Object);
@@ -2131,43 +2125,43 @@ enter_interpreter (Interpreter *interp)
 #endif
 
       switch (byteop)
-	{
+        {
 
-	default: 
+        default: 
           error_msg = "Bad opcode";
-	  acc = make_fixnum (byteop);
-	  goto vm_error_label;
+          acc = make_fixnum (byteop);
+          goto vm_error_label;
 
-	unbound_error_label:
-	  error_msg = "Unbound variable";
-	  goto vm_error_label;
+        unbound_error_label:
+          error_msg = "Unbound variable";
+          goto vm_error_label;
 
-	type_error_label:
-	  error_msg = "Bad type";
-	  goto vm_error_label;
+        type_error_label:
+          error_msg = "Bad type";
+          goto vm_error_label;
 
-	range_error_label:
-	  error_msg = "Argument out of range";
-	  goto vm_error_label;
+        range_error_label:
+          error_msg = "Argument out of range";
+          goto vm_error_label;
 
-	io_error_label:
-	  error_msg = strerror (errno);
-	  goto vm_error_label;
+        io_error_label:
+          error_msg = strerror (errno);
+          goto vm_error_label;
 
-	closed_port_error_label:
-	  error_msg = "Access to closed port";
-	  goto vm_error_label;
+        closed_port_error_label:
+          error_msg = "Access to closed port";
+          goto vm_error_label;
 
-	vm_error_label:
-	  vm_error_message = error_msg;
-	  vm_error_irritant = acc;
+        vm_error_label:
+          vm_error_message = error_msg;
+          vm_error_irritant = acc;
 
-	  flush_registers ();
-	  signal_vm_error ();
-	  break;
+          flush_registers ();
+          signal_vm_error ();
+          break;
 
-	stack_overflow: 
-	  fatal_error ("Stack overflow");
+        stack_overflow: 
+          fatal_error ("Stack overflow");
 
 #define vm_type_error(x)    do { acc = (x); goto type_error_label; } while (0)
 #define vm_range_error(x)  \
@@ -2178,7 +2172,7 @@ enter_interpreter (Interpreter *interp)
 #include "prims.h"
 #include "byteops.c"
 
-	}
+        }
     }
 }
 
@@ -2244,7 +2238,7 @@ interpret (Object code, Object renv)
     { /* Push the arguments */
       Object *s = vector_ptr (i.stack_vec) + i.stack_ptr;
       if (stack_limit <= i.stack_ptr + 3)
-	fatal_error ("Stack overflow");
+        fatal_error ("Stack overflow");
 
       s [0] = c_string (vm_error_message);
       s [1] = vm_error_irritant;
@@ -2316,7 +2310,7 @@ main (int argc, char **argv)
   setup ();
 
   set_global_value (c_symbol ("%command-line-arguments"),
-		    command_line_arglist (argc, argv));
+                    command_line_arglist (argc, argv));
 
   run_fasl ();
 
@@ -2340,8 +2334,8 @@ main (int argc, char **argv)
 
     for (i = 0; i < nbops; ++i)
       for (j = 0; j < nbops; ++j)
-	if (byteop_count [i][j] != 0)
-	  fprintf (out, "%2d %2d %10u\n", i, j, byteop_count [i][j]);
+        if (byteop_count [i][j] != 0)
+          fprintf (out, "%2d %2d %10u\n", i, j, byteop_count [i][j]);
 
     fclose (out);
   }
@@ -2356,7 +2350,7 @@ main (int argc, char **argv)
 
     for (i = 0; i < 1024; ++i)
       if (stack_depth_count [i] != 0)
-	fprintf (out, "%4d %10u\n", i, stack_depth_count [i]);
+        fprintf (out, "%4d %10u\n", i, stack_depth_count [i]);
 
     fclose (out);
   }

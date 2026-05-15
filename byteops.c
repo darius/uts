@@ -13,10 +13,10 @@ break; case bop_varref:
     unsigned offset = get_byte ();
 #ifdef BYTEOP_PROFILING
     if (frame == 0)
-      {				/* break out stats for the innermost frame */
-	byteop_count [previous_byteop][byteop] -= 1;
-	byteop = 23;
-	byteop_count [previous_byteop][byteop] += 1;
+      {                         /* break out stats for the innermost frame */
+        byteop_count [previous_byteop][byteop] -= 1;
+        byteop = 23;
+        byteop_count [previous_byteop][byteop] += 1;
       }
 #endif
     need (1);
@@ -36,8 +36,8 @@ break; case bop_global_ref:
     Object value = global_value (var);
     if (is_unbound (value))
       {
-	acc = var;
-	goto unbound_error_label;
+        acc = var;
+        goto unbound_error_label;
       }
     need (1);
     push (value);
@@ -49,9 +49,9 @@ break; case bop_global_set:
     Object value = global_value (var);
     if (is_unbound (value)) 
       {
-	drop ();
-	acc = var;
-	goto unbound_error_label;
+        drop ();
+        acc = var;
+        goto unbound_error_label;
       }
     set_global_value (var, top ());
   }
@@ -69,8 +69,8 @@ break; case bop_unless:
       pc += 2;
     else 
       {
-	unsigned offset = get_short ();
-	pc += offset;
+        unsigned offset = get_short ();
+        pc += offset;
       }
   }
 
@@ -180,7 +180,7 @@ break; case bop_invoke:
         // Put the arguments in a list for the irritant:
         Object arguments = nil;
         while (frame_ptr < stack_ptr)
-	  arguments = cons (pop (), arguments);
+          arguments = cons (pop (), arguments);
         // TODO make a function to listify like that
         // Now the stack state is popped back to the continuation.
         // Cons an informative irritant:
@@ -191,7 +191,7 @@ break; case bop_invoke:
                                       nil))));
         // Raise the error:
         error_msg = "Call to a non-procedure";
-	goto vm_error_label;
+        goto vm_error_label;
       }
     pc = 0;
     code = closure_code (acc);
@@ -202,15 +202,15 @@ break; case bop_invoke:
     {
       Object c = vector_ref (code, 5); // 5 = codevec slot for call count
       if (is_fixnum (c))
-	{
-	  int count = fixnum_value (c) + 1;
-	  if (int_is_fixnum (count))
-	    vector_set (code, 5, make_fixnum (count));
-	  if (count == 2)	/* don't link in until 2nd hit */
-	    set_global_value (
-	      all_entered_code_vectors_symbol,
-	      cons (code, global_value (all_entered_code_vectors_symbol)));
-	}
+        {
+          int count = fixnum_value (c) + 1;
+          if (int_is_fixnum (count))
+            vector_set (code, 5, make_fixnum (count));
+          if (count == 2)       /* don't link in until 2nd hit */
+            set_global_value (
+              all_entered_code_vectors_symbol,
+              cons (code, global_value (all_entered_code_vectors_symbol)));
+        }
     }
 #endif
   }
@@ -230,7 +230,7 @@ break; case bop_apply:
         acc = nil;
         while (frame_ptr < stack_ptr)
           acc = cons (pop (), acc);
-        // Now the stack state is popped back to the continuation.	
+        // Now the stack state is popped back to the continuation.      
         restore_state (); // XXX why did I write restore_state() here, but not in the corresponding code for bop_invoke?
         acc = cons (c_symbol ("arguments:"), cons (acc, nil));
         error_msg = "Too few arguments to apply";
@@ -296,8 +296,8 @@ break; case bop_set_cc:
 
     if (!is_vector (saved_stack)) 
       {
-	drop ();
-	vm_type_error (saved_stack);
+        drop ();
+        vm_type_error (saved_stack);
       }
 
     limit = vector_length (saved_stack);
@@ -651,7 +651,7 @@ break; case bop_prim_2:
               vm_check_type (is_fixnum (x0), x0);
               { unsigned i = fixnum_value (x0);
                   if (string_length (x1) <= i)
-		      vm_range_error (i);
+                      vm_range_error (i);
                   acc = make_char (string_ptr (x1) [i]); } }
 
       break; case p2_vector_ref:
@@ -703,30 +703,30 @@ break; case bop_prim_2:
               vm_check_type (is_output_port (x0), x0);
               if (!port_is_open (x0)) 
                   {
-		      acc = x0;
-		      goto closed_port_error_label;
+                      acc = x0;
+                      goto closed_port_error_label;
                   }
               if (EOF == fputc (char_value (x1), port_file (x0)))
                   {
-		      acc = x0;
-		      goto io_error_label;
+                      acc = x0;
+                      goto io_error_label;
                   }
               /* FIXME: should fflush() here, but it'd really kill
                  performance... */
           }
 
-#define COERCE_DOUBLE(d, x)			\
-    do {					\
-      Object tmp_ = (x);			\
-      if (is_flonum (tmp_))			\
-	(d) = flonum_value (tmp_);		\
-      else if (is_fixnum (tmp_))		\
-	(d) = fixnum_value (tmp_);		\
-      else {					\
-        error_msg = "Bad argument type";	\
-        acc = tmp_;				\
-        goto vm_error_label;			\
-      }						\
+#define COERCE_DOUBLE(d, x)                     \
+    do {                                        \
+      Object tmp_ = (x);                        \
+      if (is_flonum (tmp_))                     \
+        (d) = flonum_value (tmp_);              \
+      else if (is_fixnum (tmp_))                \
+        (d) = fixnum_value (tmp_);              \
+      else {                                    \
+        error_msg = "Bad argument type";        \
+        acc = tmp_;                             \
+        goto vm_error_label;                    \
+      }                                         \
     } while (0)
 
       break; case p2_ADD:
@@ -817,11 +817,11 @@ break; case bop_prim_2:
                   }
           }
 
-#define must_be_natnum(obj) 			\
-    do {					\
-      Object nat_ = (obj);			\
-      if (!is_natnum (nat_))			\
-        vm_type_error (nat_); 			\
+#define must_be_natnum(obj)                     \
+    do {                                        \
+      Object nat_ = (obj);                      \
+      if (!is_natnum (nat_))                    \
+        vm_type_error (nat_);                   \
     } while (0)
 
       break; case p2_make_vector:
@@ -917,7 +917,7 @@ break; case bop_prim_3:
               vm_check_type (is_char (x0), x0);
               { unsigned i = fixnum_value (x1);
                   if (string_length (x2) <= i)
-		      vm_range_error (i);
+                      vm_range_error (i);
                   string_ptr (x2) [i] = char_value (x0); } }
 
       break; case p3_vector_setB:

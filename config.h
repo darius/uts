@@ -1,6 +1,6 @@
 /* Parameters */
 
-#define VM_STACK_SIZE 	16384
+#define VM_STACK_SIZE   16384
 #define FASL_STACK_SIZE 1000
 
 
