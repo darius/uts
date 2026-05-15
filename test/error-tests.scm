@@ -151,6 +151,12 @@
 (test-error "(substring \"hi\" 5 6)" (lambda () (substring "hi" 5 6)))
 (test-error "(substring \"hi\" 2 1)" (lambda () (substring "hi" 2 1)))
 
+;; inexact->exact range
+(test-error "(inexact->exact (expt 2 61))"
+            (lambda () (inexact->exact (expt 2 61))))
+(test-error "(inexact->exact (- (- (expt 2 61)) 512))"
+            (lambda () (inexact->exact (- (- (expt 2 61)) 512))))
+
 
 (SECTION 'arithmetic-errors)
 

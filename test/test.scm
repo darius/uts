@@ -218,6 +218,13 @@
   (should-be "exact.4" #t (exact? (inexact->exact 3.0)))
   (should-be "exact.5" 3 (inexact->exact 3))  ; identity on exact
 
+  (should-be "exact.range.1" -2305843009213693952 (arithmetic-shift -1 61))
+  (should-be "exact.range.2" -2305843009213693952 (inexact->exact (- (expt 2 61))))
+  (should-be "exact.range.3" 2305843009213693951
+             (+ (arithmetic-shift 1 60) -1 (arithmetic-shift 1 60)))
+  (should-be "exact.range.4" (- 2305843009213693951 255)
+             (inexact->exact (- (expt 2 61) 256.0)))
+
   ;; === Transcendental functions ===
   (should-be "trans.1" 2.0 (sqrt 4))
   (should-be "trans.2" 3.0 (sqrt 9.0))
