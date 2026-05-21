@@ -268,19 +268,39 @@
   (should-be "sym.3" #t (eq? (string->symbol "foo") 'foo))
 
   ;; === Number/string conversion with radix ===
-  (should-be "numstr.1" "42" (number->string 42))
+  (should-be "numstr.1" "42"   (number->string 42))
   (should-be "numstr.2" "101010" (number->string 42 2))
-  (should-be "numstr.3" "52" (number->string 42 8))
-  (should-be "numstr.4" "2A" (number->string 42 16))
-  (should-be "numstr.5" "-42" (number->string -42))
-  (should-be "numstr.6" 42 (string->number "42"))
-  (should-be "numstr.7" #f (string->number "not-a-number"))
-  (should-be "numstr.8" 42 (string->number "101010" 2))
-  (should-be "numstr.9" 42 (string->number "52" 8))
-  (should-be "numstr.10" 42 (string->number "2a" 16))
+  (should-be "numstr.3" "52"   (number->string 42 8))
+  (should-be "numstr.4" "2A"   (number->string 42 16))
+  (should-be "numstr.5" "-42"  (number->string -42))
+  (should-be "numstr.6" 42     (string->number "42"))
+  (should-be "numstr.7" #f     (string->number "not-a-number"))
+  (should-be "numstr.8" 42     (string->number "101010" 2))
+  (should-be "numstr.9" 42     (string->number "52" 8))
+  (should-be "numstr.10" 42    (string->number "2a" 16))
   (should-be "numstr.11" "39U" (number->string 4242 36))
-  (should-be "numstr.12" 4242 (string->number "39u" 36))
+  (should-be "numstr.12" 4242  (string->number "39u" 36))
   (should-be "numstr.13" -1295 (string->number "-zz" 36))
+
+  ;; uts impl-specific
+  (should-be "numstr.14" 3e18 (string->number "2999999999999999999"))
+  (should-be "numstr.15" 1e21 (string->number "999999999999999999999"))
+
+  ;; more num->str cases
+  (should-be "numstr.16" 42    (string->number "#e42"))
+  (should-be "numstr.17" 42.0  (string->number "#i42"))
+  (should-be "numstr.18" 420.0 (string->number "42#"))
+  (should-be "numstr.19" 66    (string->number "#x#e42"))
+  (should-be "numstr.20" 66.0  (string->number "#x#i42"))
+  (should-be "numstr.21" #f    (string->number "#x42.0"))
+  (should-be "numstr.22" #f    (string->number "#x#e1.0"))
+  (should-be "numstr.23" #f    (string->number "#x42#"))
+  (should-be "numstr.24" #f    (string->number "#x42."))
+  (should-be "numstr.25" 42    (string->number "#e42."))
+  (should-be "numstr.26" 42    (string->number "#e42.0"))
+  (should-be "numstr.27" #f    (string->number "#e42.5"))  ;; impl-specific
+  (should-be "numstr.28" 42.0  (string->number "42.0"))
+  (should-be "numstr.29" 1000  (string->number "#e1e3"))
 
   ;; === Flonum arithmetic ===
   (should-be "flo.1" 3.5 (+ 1.0 2.5))

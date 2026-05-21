@@ -50,12 +50,6 @@ Unix). Or enter `(%exit 0)`.
 
 ## Differences from R4RS
 
-### Case sensitivity
-
-Symbols and identifiers are case sensitive: `(eq? 'foo 'FOO)` is
-false. Other Schemes like Chez and Guile make the same choice, though
-R4RS forbids this, saying "For example, Foo is the same identifier as FOO."
-
 ### R4RS nonessentials omitted
 
 Omitted numeric types: big integers (over 62 bits signed), rational

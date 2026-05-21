@@ -854,7 +854,7 @@ string_to_number(Object str, unsigned radix) {
       case 'e':
         if (saw_exactness_prefix) return obj_false;
         saw_exactness_prefix = true;
-        is_exact = expect_exact = (c == 'e');
+        expect_exact = (c == 'e');
         break;
       case 'b':
       case 'o':
@@ -958,7 +958,7 @@ string_to_number(Object str, unsigned radix) {
 
     // suffix:       '' | exp-marker sign d[10]+
     // exp-marker:   e | s | f | d | l
-    if (strchr("esfdlESFDL", c)) {
+    if (strchr("esfdlESFDL", c)) {    // TODO also check radix==10, I guess
       is_exact = false;
       *buf++ = 'e';
       if (i == n) return obj_false;
@@ -984,42 +984,63 @@ string_to_number(Object str, unsigned radix) {
   }
 
 scan_real_done:
-
-  if (saw_exactness_prefix && is_exact != expect_exact)
-    // FIXME: #e28.000 should be ok, actually - equal to 28
-    return obj_false;
-
   // At this point i = index of first char not in number.
+  // Skip trailing spaces, and terminate buf.
   while (i < n && isspace(s[i]))
     ++i;
   if (i != n) return obj_false;
-
   *buf = '\0';
 
-  // We've transcribed the number into buffer in a format the C library
-  // should understand -- now let's convert it. Obviously this won't
-  // be R4RS compliant unless strtod() happens to be. */
+  // We've transcribed the number into buf in a format the C library should
+  // understand; now let's convert it. (This won't be R4RS-compliant re
+  // floating-point precision unless this system's strtod() is.)
 
-  if (is_exact || radix != 10) {
+  // Need to handle these cases:
+  //  (column names: is_e = is_exact, xp = exactness prefix)
+  //  where xp: "":   saw_exactness_prefix = false, expect_exact = false
+  //        xp: "#e": saw_exactness_prefix = true,  expect_exact = true
+  //        xp: "#i": saw_exactness_prefix = false, expect_exact = false
+
+  //   str    | is_e | radix | xp | what to do
+  //   42     | yes  |    10 |    | use strtoll, backstop with strtod on overflow
+  //   #e42   | yes  |    10 | #e | use strtoll
+  //   #x42   | yes  |  !=10 |    | use strtoll
+  //   #x#e42 | yes  |  !=10 | #e | use strtoll
+  //   #x#i42 | yes  |  !=10 | #i | use strtoll, coerce to flonum
+
+  //   #x42.0 | no   |  !=10 |    | #f
+  //   #x#e1.0| no   |  !=10 | #e | #f
+  //   #x#i42.| no   |  !=10 | #i | #f
+
+  //   #e42.0 | no   |    10 | #e | use strtod, coerce to fixnum
+  //   42.0   | no   |    10 |    | use strtod
+  //   #i42   | ?    |    10 | #i | use strtod
+
+  if (is_exact) {
     char *end;
     long long i = (errno = 0, strtoll(buffer, &end, radix));
     if (errno == 0 && *end == '\0') {
-      if (int_is_fixnum(i) && is_exact)
+      if (expect_exact && int_is_fixnum(i)) // xp is either "" or "#e"
         return make_fixnum(i);
-      else if (saw_exactness_prefix && is_exact)
-        return obj_false;
       else
-        return make_flonum((double) i);
+        return make_flonum(i);  // case like #i42 or <largedecimal>
     }
-    if ((saw_exactness_prefix && is_exact) || radix != 10)
-      return obj_false;
-    // else fall through
+    // else fall through: e.g. <verylargedecimal>
   }
+
+  if (radix != 10)
+    return obj_false;
 
   char *end;
   double d = (errno = 0, strtod(buffer, &end));
   if (errno != 0 || *end != '\0')
     return obj_false;
+  if (saw_exactness_prefix && expect_exact) { // case like #e<decimalfloat>
+    // Same conversion logic as the inexact->exact primitive: (TODO unify the code?)
+    if (d == floor(d) && FIXNUM_MIN <= d && d < (FIXNUM_MAX+1))
+      return make_fixnum((Fixnum) d);
+    return obj_false;
+  }
   return make_flonum(d);
 }
 
