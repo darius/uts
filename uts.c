@@ -1484,10 +1484,8 @@ undump_string(void) {
   return str;
 }
 
-#define STACK_SIZE 1000
-
 #define PUSH(x) do {                   \
-        if (STACK_SIZE <= sp)          \
+        if (FASL_STACK_SIZE <= sp)          \
           stack_error();               \
         stack_base[sp++] = (x);        \
                 } while (0)
@@ -1506,7 +1504,7 @@ stack_error(void) {
 // RECOVERABLE
 static Object 
 read_fasl(void) {
-  Object fasl_stack = make_vector(STACK_SIZE, nil);
+  Object fasl_stack = make_vector(FASL_STACK_SIZE, nil);
   Object *stack_base = vector_ptr(fasl_stack);
   int sp = 0;                   // stack pointer
 
