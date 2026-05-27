@@ -6,7 +6,6 @@
 
 set -e
 cd "$(dirname "$0")"
-export DYLD_LIBRARY_PATH=./gc/.libs
 
 THRESHOLD=10  # percent slowdown to flag as regression
 
