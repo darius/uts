@@ -40,7 +40,6 @@ clean:
 	rm -f init.c new-init.c
 	rm -f test/tmp[123]
 
-# TODO don't need this wrapper anymore -- rm it once we get rid of the uts.fasl slot in the command line args
 install: uts
 	mkdir -p $(PREFIX)/bin
 	cp uts $(PREFIX)/bin/.
