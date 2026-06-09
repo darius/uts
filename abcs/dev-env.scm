@@ -115,7 +115,7 @@
        (display ",d           - debug the last error, i.e. (%debug)\n")
        (display ",l name      - (load \"name.scm\")\n")
        (display ",l \"x.scm\"   - (load \"x.scm\")\n")
-       (display ",! expr      - evaluate expr for effect, don't print it\n")
+       (display ",! expr      - evaluate expr for effect, don't print the value\n")
        (display ",time expr   - time the evaluation of expr\n"))
       ((d)
        (%debug))

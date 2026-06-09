@@ -55,7 +55,7 @@ Enter an expression. On an error, enter ,d to debug. For more commands: ,help
 ,d           - debug the last error, i.e. (%debug)
 ,l name      - (load "name.scm")
 ,l "x.scm"   - (load "x.scm")
-,! expr      - evaluate expr for effect, don't print it
+,! expr      - evaluate expr for effect, don't print the value
 ,time expr   - time the evaluation of expr
 -> oops
 
@@ -112,6 +112,6 @@ These would be nice next goals:
   behavior shown up by newer C compilers, converted to 64 bits,
   overhauled configure/build/install, added tests/benchmarks/profiling
   and the scripts for these, adapted the `corpus/` code as further
-  tests, other small improvements, helped with perf. Thanks, Claude!
+  tests, other small improvements, helped me use `perf`. Thanks, Claude!
 
 - Before and after: me, Darius

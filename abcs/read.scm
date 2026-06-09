@@ -173,11 +173,10 @@
 
     (install-read-macro #\,
       (lambda (in-port char)
-	(list 
-	 (if (eqv? (peek-char in-port) #\@)
-	     (begin (read-char in-port) 'unquote-splicing)
-	     'unquote)
-	 (read in-port))))
+	(list (if (eqv? (peek-char in-port) #\@)
+	          (begin (read-char in-port) 'unquote-splicing)
+	          'unquote)
+	      (read in-port))))
 
     (lambda opt:in-port
       (read (%optional-arg opt:in-port (current-input-port))))))
