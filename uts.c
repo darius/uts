@@ -1018,12 +1018,12 @@ scan_real_done:
 
   if (is_exact) {
     char *end;
-    long long i = (errno = 0, strtoll(buffer, &end, radix));
+    long long ival = (errno = 0, strtoll(buffer, &end, radix));
     if (errno == 0 && *end == '\0') {
-      if (expect_exact && int_is_fixnum(i)) // xp is either "" or "#e"
-        return make_fixnum(i);
+      if (expect_exact && int_is_fixnum(ival)) // xp is either "" or "#e"
+        return make_fixnum(ival);
       else
-        return make_flonum(i);  // case like #i42 or <largedecimal>
+        return make_flonum(ival);  // case like #i42 or <largedecimal>
     }
     // else fall through: e.g. <verylargedecimal>
   }

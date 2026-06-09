@@ -1,4 +1,4 @@
-BASE_CFLAGS = -Wall
+BASE_CFLAGS = -Wall -Wshadow
 
 # Include generated config if it exists
 -include config.mk
