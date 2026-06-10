@@ -774,27 +774,28 @@ flush_input_line(FILE *in) {
   }
 }
 
+// Pre: 2 <= radix <= 36
 static int
 convert_digit(char c, int radix) {
-  int i;
+  int digit;
   if (c < '0')
     return -1;
   if (c <= '9')
-    i = c - '0';
+    digit = c - '0';
   else {
     char C = toupper(c);
     if (C < 'A')
       return -1;
-    if (C <= 'Z')
-      i = C - 'A' + 10;
-    else
-      return -1;
+    digit = C - ('A' - 10);
   }
-  return i < radix ? i : -1;
+  return digit < radix ? digit : -1;
 }
 
 static Object 
 string_to_number(Object str, unsigned radix) {
+  if (radix < 2 || 36 < radix)
+    return obj_false;   // TODO or should we raise an error?
+
   /* The grammar for real numbers, where R is the radix, from R4RS:
 
      num[R]:            whitespace* prefix[R] real[R] whitespace*
@@ -870,9 +871,6 @@ string_to_number(Object str, unsigned radix) {
       c = s[i++];
     }
   }
-
-  if (radix < 2 || 36 < radix)
-    return obj_false;   // or is this an error?
 
   if (c == '+' || c == '-') {
     if (c == '-')
@@ -1047,11 +1045,13 @@ scan_real_done:
         and 2 <= radix <= 36. */
 static void
 unparse_int(char *buffer, Fixnum n, unsigned radix) {
-  uint64_t u = n < 0 ? -(uint64_t)n : (uint64_t)n;
-  if (n < 0)
+  uint64_t u = (uint64_t)n;
+  if (n < 0) {
+    u = -u;
     *buffer++ = '-';
+  }
 
-  char stack[65], *sp = stack + 65;
+  char stack[65], *end = stack + sizeof stack, *sp = end;
 
   // First compute the digits in reverse order:
   if (u == 0)
@@ -1059,12 +1059,12 @@ unparse_int(char *buffer, Fixnum n, unsigned radix) {
   else
     for (; u != 0; u /= radix) {
       unsigned digit = u % radix;
-      *--sp = (digit < 10 ? '0' + digit : 'A' - 10 + digit);
+      *--sp = digit + (digit < 10 ? '0' : 'A' - 10);
     }
 
-  // Now stick them in the buffer:
-  memcpy(buffer, sp, (stack + 65) - sp);
-  buffer[(stack + 65) - sp] = '\0';
+  // Then copy to the output:
+  memcpy(buffer, sp, end - sp);
+  buffer[end - sp] = '\0';
 }
 
 // This is not R4RS-compliant:
