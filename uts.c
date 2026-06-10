@@ -1192,14 +1192,12 @@ static void
 divide_inexact(double *quot, double *rem, double n, double d) {
   if (d == 0)           // what about 0 % 0?
     division_by_zero();
-  {
-    double foo;
-    if (0 != modf(d, &foo))
-      vm_error("Bad type", make_flonum(d));
-    if (0 != modf(n, &foo))
-      vm_error("Bad type", make_flonum(n));
-    *rem = d * modf(n / d, quot);
-  }
+  double foo;
+  if (0 != modf(d, &foo))
+    vm_error("Bad type", make_flonum(d));
+  if (0 != modf(n, &foo))
+    vm_error("Bad type", make_flonum(n));
+  *rem = d * modf(n / d, quot);
 }
 
 // RECOVERABLE
@@ -1399,29 +1397,22 @@ put_object(FILE *file, Object obj, Flag displaying) {
       put_object(file, car(obj), displaying);
       for (;;) {
         obj = cdr(obj);
-        if (is_pair(obj)) {
-          put_char(' ', file);
-          put_object(file, car(obj), displaying);
-        } 
-        else {
-          if (obj != nil) {
-            put_string(" . ", file);
-            put_object(file, obj, displaying);
-          }
-          break;
-        }
+        if (!is_pair(obj)) break;
+        put_char(' ', file);
+        put_object(file, car(obj), displaying);
+      } 
+      if (obj != nil) {
+        put_string(" . ", file);
+        put_object(file, obj, displaying);
       }
       put_char(')', file);
       break;
     case a_vector:
       put_string("#(", file);
-      {
-        int i;
-        for (i = 0; i < vector_length(obj); ++i) {
-          if (i != 0)
-            put_char(' ', file);
-          put_object(file, vector_ref(obj, i), displaying);
-        }
+      for (int i = 0; i < vector_length(obj); ++i) {
+        if (i != 0)
+          put_char(' ', file);
+        put_object(file, vector_ref(obj, i), displaying);
       }
       put_char(')', file);
       break;
@@ -1666,7 +1657,7 @@ expt(Object x1, Object x0) {
 static Object
 prim_atan(Object x1, Object x0) {
   return make_flonum(atan2(as_double(x1),
-                             as_double(x0))); 
+                           as_double(x0))); 
 }
 
 static Object
@@ -1681,12 +1672,10 @@ static Object
 prim_write(Object x1, Object x0) {
   check_type(is_output_port(x0), x0);
   check_openness(x0);
-  {
-    FILE *fp = port_file(x0);
-    write_object(fp, x1);
-    if (0 != fflush(fp))
-      io_error(errno);
-  }
+  FILE *fp = port_file(x0);
+  write_object(fp, x1);
+  if (0 != fflush(fp))
+    io_error(errno);
   return void_marker;
 }
 
@@ -2096,13 +2085,12 @@ main(int argc, char **argv) {
 
 #ifdef BYTEOP_PROFILING
   {
-    int i, j;
     FILE *out = fopen("byteop_profile", "w");
     if (!out)
       fatal_error(strerror(errno));
 
-    for (i = 0; i < nbops; ++i)
-      for (j = 0; j < nbops; ++j)
+    for (int i = 0; i < nbops; ++i)
+      for (int j = 0; j < nbops; ++j)
         if (byteop_count[i][j] != 0)
           fprintf(out, "%2d %2d %10u\n", i, j, byteop_count[i][j]);
 
@@ -2112,12 +2100,11 @@ main(int argc, char **argv) {
 
 #ifdef STACK_DEPTH_PROFILING
   {
-    int i, j;
     FILE *out = fopen("stack_depth_profile", "w");
     if (!out)
       fatal_error(strerror(errno));
 
-    for (i = 0; i < 1024; ++i)
+    for (int i = 0; i < 1024; ++i)
       if (stack_depth_count[i] != 0)
         fprintf(out, "%4d %10u\n", i, stack_depth_count[i]);
 
