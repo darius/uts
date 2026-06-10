@@ -46,18 +46,16 @@ typedef struct Object_header {
 
 typedef Object_header *Object;  // A Scheme datum, or pointer thereto.
                                 // The lower bits are tag bits, as follows:
-/*
-   xxxxxxxx xxxxxxxx xxxxxxxx xxxxxx00   pointer
-   xxxxxxxx xxxxxxxx xxxxxxxx xxxxxx01   fixnum
-   xxxxxxxx xxxxxxxx xxxxxxxx xxxxxx10   reserved
-   00000000 00000000 0000xxxx xxxx0011   char
-   00000000 00000000 00000000 00x01011   boolean
-   00000000 00000000 00000000 0xx11011   00=eof, 01=(), 10=unbound
-   xxxxxxxx xxxxxxxx xxxxxxxx xxxxx111   reserved
+// xxxxxxxx xxxxxxxx xxxxxxxx xxxxxx00   pointer
+// xxxxxxxx xxxxxxxx xxxxxxxx xxxxxx01   fixnum
+// xxxxxxxx xxxxxxxx xxxxxxxx xxxxxx10   reserved
+// 00000000 00000000 0000xxxx xxxx0011   char
+// 00000000 00000000 00000000 00x01011   boolean
+// 00000000 00000000 00000000 0xx11011   00=eof, 01=(), 10=unbound
+// xxxxxxxx xxxxxxxx xxxxxxxx xxxxx111   reserved
 
-   A pointer Object points to an Object_header, with the object's data
-   directly following the header in memory.
-*/
+// A pointer Object points to an Object_header, with the object's data
+// directly following the header in memory.
 
 fast UWord
 object_bits(Object obj) {
@@ -796,29 +794,28 @@ string_to_number(Object str, unsigned radix) {
   if (radix < 2 || 36 < radix)
     return obj_false;   // TODO or should we raise an error?
 
-  /* The grammar for real numbers, where R is the radix, from R4RS:
+  // The grammar for real numbers, where R is the radix, from R4RS:
 
-     num[R]:            whitespace* prefix[R] real[R] whitespace*
-     prefix[R]:         r[R] exactness | exactness r[R]
+  // num[R]:            whitespace* prefix[R] real[R] whitespace*
+  // prefix[R]:         r[R] exactness | exactness r[R]
 
-     real[R]:           sign ureal[R]
-     ureal[R]:          uint[R] | decimal[R]
-     uint[R]:           d[R]+ #*
-     decimal[10]:       d[10]+                suffix
-                      |           . d[10]+ #* suffix
-                      | d[10+     . d[10]* #* suffix
-                      | d[10]+ #+ .        #* suffix
-     suffix:            '' | exp-marker sign d[10]+
-     exp-marker:        e | s | f | d | l
+  // real[R]:           sign ureal[R]
+  // ureal[R]:          uint[R] | decimal[R]
+  // uint[R]:           d[R]+ #*
+  // decimal[10]:       d[10]+                suffix
+  //                  |           . d[10]+ #* suffix
+  //                  | d[10+     . d[10]* #* suffix
+  //                  | d[10]+ #+ .        #* suffix
+  // suffix:            '' | exp-marker sign d[10]+
+  // exp-marker:        e | s | f | d | l
 
-     sign:              '' | '+' | -
-     exactness:         '' | # i | # e
-     r[2]:              # b
-     r[8]:              # o
-     r[10]:             '' | # d
-     r[16]:             # x
-     d[R]:              <digit of radix R>
-   */
+  // sign:              '' | '+' | -
+  // exactness:         '' | # i | # e
+  // r[2]:              # b
+  // r[8]:              # o
+  // r[10]:             '' | # d
+  // r[16]:             # x
+  // d[R]:              <digit of radix R>
 
   const char *s = string_cstr(str);
   int n = string_length(str);
@@ -1041,8 +1038,8 @@ scan_real_done:
   return make_flonum(d);
 }
 
-/* Pre: buffer is big enough to hold any n converted in radix,
-        and 2 <= radix <= 36. */
+// Pre: buffer is big enough to hold any n converted in radix,
+//      and 2 <= radix <= 36.
 static void
 unparse_int(char *buffer, Fixnum n, unsigned radix) {
   uint64_t u = (uint64_t)n;
@@ -2056,12 +2053,10 @@ main(int argc, char **argv) {
   setvbuf(stdout, NULL, _IONBF, 0);
 #endif
 
-  /*  
-      This tweak doesn't seem to be worth the space cost (see gc.h):
-      GC_free_space_divisor = 2; 
-      Nor this (slower on bench):
-      GC_enable_incremental();
-   */
+  //  This tweak doesn't seem to be worth the space cost (see gc.h):
+  //  GC_free_space_divisor = 2; 
+  //  Nor this (slower on bench):
+  //  GC_enable_incremental();
 
   if (0 != setjmp(vm_error_catch_point))
     unexpected_vm_error();
