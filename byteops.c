@@ -656,9 +656,9 @@ case bop_prim_1: {
     }
 
     break;
-      case p1_listTOvector: {
-        callout1(list_to_vector);
-      }
+    case p1_listTOvector: {
+      callout1(list_to_vector);
+    }
 
     break;
     case p1_system: {
