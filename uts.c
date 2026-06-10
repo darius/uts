@@ -190,7 +190,7 @@ type_error(Object obj) {
 }
 
 static void 
-range_error(int i) {
+range_error(Fixnum i) {
   vm_error("Range error", make_fixnum(i));
 }
 
@@ -207,17 +207,23 @@ heap_error(void) {
   fatal_error("Out of heap space");
 }
 
+static void 
+size_error(void) {
+  fatal_error("Allocation size overflow");
+}
+
 fast void 
 check_type(Flag flag, Object obj) { 
   if (!flag) 
     type_error(obj);
 }
 
+// TODO review size argument type for all callers of allot/allot_atomic
 fast Object 
 allot(Tag tag, size_t size) {
   assert(0 <= tag && tag < num_tags);
-  assert(size < obj_size_limit);
-  Object_header *header = (Object_header *) GC_malloc(sizeof *header + size);
+  if (obj_size_limit <= size) size_error();
+  Object_header *header = (Object_header*)GC_malloc(sizeof *header + size);
   if (header == NULL)
     heap_error();
   header->size = size;
@@ -228,9 +234,8 @@ allot(Tag tag, size_t size) {
 fast Object 
 allot_atomic(Tag tag, size_t size) {
   assert(0 <= tag && tag < num_tags);
-  assert(size < obj_size_limit);
-  Object_header *header = 
-    (Object_header *) GC_malloc_atomic(sizeof *header + size);
+  if (obj_size_limit <= size) size_error();
+  Object_header *header = (Object_header*)GC_malloc_atomic(sizeof *header + size);
   if (header == NULL)
     heap_error();
   header->size = size;
@@ -238,7 +243,8 @@ allot_atomic(Tag tag, size_t size) {
   return header;
 }
 
-fast unsigned 
+// TODO changing this to Fixnum seems to slow us down a bit measurably. true? what to do?
+fast unsigned
 vector_length(Object vec) {
   assert(is_vector(vec));
   return object_header(vec).size / sizeof(Object);
@@ -274,14 +280,12 @@ string_equal(Object str1, Object str2) {
   unsigned L = string_length(str1);
   if (string_length(str2) != L)
     return false;
-  else {
-    const Char *s1 = string_ptr(str1);
-    const Char *s2 = string_ptr(str2);
-    for (unsigned i = 0; i < L; ++i)
-      if (s1[i] != s2[i])
-        return false;
-    return true;
-  }
+  const Char *s1 = string_ptr(str1);
+  const Char *s2 = string_ptr(str2);
+  for (unsigned i = 0; i < L; ++i)
+    if (s1[i] != s2[i])
+      return false;
+  return true;
 }
 
 
@@ -298,12 +302,12 @@ port_ptr(Object port) {
 
 fast FILE *
 port_file(Object port) {
-  return port_ptr(port) -> file;
+  return port_ptr(port)->file;
 }
 
 fast Flag
 port_is_open(Object port) {
-  return port_ptr(port) -> is_open;
+  return port_ptr(port)->is_open;
 }
 
 fast void
@@ -329,11 +333,9 @@ port_finalizer(GC_PTR port_obj, GC_PTR _) {
 static Object 
 make_port(Tag tag, FILE *file) {
   Object result = allot_atomic(tag, sizeof(struct File_port));
-  port_ptr(result) -> file = file;
-  port_ptr(result) -> is_open = true;
-
+  port_ptr(result)->file = file;
+  port_ptr(result)->is_open = true;
   GC_register_finalizer(result, port_finalizer, NULL, NULL, NULL);
-
   return result;
 }
 
@@ -415,15 +417,16 @@ my_round(double x) {
 }
 
 
+// TODO name with _unsafe
 fast Object 
-field_ref(Object obj, unsigned index) {
+field_ref(Object obj, size_t index) {   // XXX s/size_t/Fixnum ?
   assert(is_boxed(obj));
   assert(index < object_header(obj).size / sizeof(Object));
   return ((Object *) data_ptr(obj))[index];
 }
 
 fast void 
-field_set(Object obj, unsigned index, Object value) {
+field_set(Object obj, size_t index, Object value) {   // XXX s/size_t/Fixnum ?
   assert(is_boxed(obj));
   assert(index < object_header(obj).size / sizeof(Object));
   ((Object *) data_ptr(obj))[index] = value;
@@ -438,35 +441,63 @@ allot2(Tag tag, Object obj0, Object obj1) {
   return result;
 }
 
-fast Object 
-allot_vector(unsigned length) {
-  return allot(a_vector, length * sizeof(Object));
+static void
+vector_size_error(Fixnum length) {
+  vm_error("Can't make a vector of out-of-range length", make_fixnum(length));
 }
 
 fast Object 
-vector_ref(Object vec, unsigned index) {
+allot_vector(Fixnum length) {
+  if (obj_size_limit / sizeof(Object) <= (UWord)length)
+    vector_size_error(length);
+  return allot(a_vector, ((UWord)length) * sizeof(Object));
+}
+
+static void
+vector_index_error(Fixnum index) {
+  vm_error("Vector access out of range", make_fixnum(index));
+}
+
+fast Object 
+vector_ref(Object vec, Fixnum index) {
   assert(is_vector(vec));
-  assert(index < vector_length(vec));
+  if (vector_length(vec) <= (UWord)index)
+    vector_index_error(index);
   return field_ref(vec, index);
 }
 
-fast void 
-vector_set(Object vec, unsigned index, Object value) {
+fast Object 
+vector_ref_unsafe(Object vec, Fixnum index) {
   assert(is_vector(vec));
-  assert(index < vector_length(vec));
+  assert((UWord)index < vector_length(vec));
+  return field_ref(vec, (size_t) index);
+}
+
+fast void 
+vector_set(Object vec, Fixnum index, Object value) {
+  assert(is_vector(vec));
+  if (vector_length(vec) <= (UWord)index)
+    vector_index_error(index);
+  field_set(vec, index, value);
+}
+
+fast void 
+vector_set_unsafe(Object vec, Fixnum index, Object value) {
+  assert(is_vector(vec));
+  assert((UWord)index < vector_length(vec));
   field_set(vec, index, value);
 }
 
 static void 
 vector_fill(Object vec, Object filler) {
   assert(is_vector(vec));
-  unsigned limit = vector_length(vec);
-  for (unsigned i = 0; i < limit; ++i)
-    vector_set(vec, i, filler);
+  Fixnum limit = vector_length(vec);
+  for (Fixnum i = 0; i < limit; ++i)
+    vector_set_unsafe(vec, i, filler);
 }
 
 fast Object 
-make_vector(unsigned length, Object filler) {
+make_vector(Fixnum length, Object filler) {
   Object vec = allot_vector(length);
   vector_fill(vec, filler);
   return vec;
@@ -620,14 +651,14 @@ append(Object list1, Object list2) {
 static Object
 list_to_vector(Object list) {
   Object vec = make_vector(list_length(list), obj_false);
-  int i = 0;
+  Fixnum i = 0;
   for (Object rest = list; is_pair(rest); rest = cdr(rest), ++i) 
-    vector_set(vec, i, car(rest));
+    vector_set_unsafe(vec, i, car(rest));
   return vec;
 }
 
 fast void 
-put_char(unsigned char c, FILE *out) {
+put_char(int c, FILE *out) {
 again:
   if (EOF == putc(c, out)) {
     if (errno == EINTR) goto again;
@@ -648,9 +679,9 @@ again:
 static void
 display_string(Object str, FILE *out) {
   assert(is_string(str));
-  int l = string_length(str);
-  const unsigned char *s = string_ptr(str);
-  for (int i = 0; i < l; ++i)
+  Fixnum sl = string_length(str);
+  const Char *s = string_ptr(str);
+  for (Fixnum i = 0; i < sl; ++i)
     put_char(s[i], out);
 }
 
@@ -682,30 +713,29 @@ make_symbol(Object str) {
 static Object
 string_copy(Object str) {
   assert(is_string(str));
-  int l = string_length(str);
+  unsigned l = string_length(str);
   Object str2 = allot_atomic(a_string, l);
   memcpy(string_ptr(str2), string_ptr(str), l);
   return str2;
 }
 
-static unsigned
+static UWord
 string_hash(Object str) {
   assert(is_string(str));
-  const char *s = string_cstr(str);
-  unsigned c = 0;
-  for (int l = string_length(str); l != 0; ++s, --l)
-    c = c * 2 + *s;
-  return c;
+  const Char *s = string_ptr(str);
+  UWord acc = 0;
+  for (Fixnum l = string_length(str); l != 0; ++s, --l)
+    acc = acc * 2 + *s;
+  return acc;
 }
 
 static Object
 string_to_symbol(Object str) {
   assert(is_string(str));
   assert(is_vector(symbol_table));
-  unsigned i = string_hash(str) % vector_length(symbol_table);
+  Fixnum i = string_hash(str) % (UWord)vector_length(symbol_table);
   Object bucket = vector_ref(symbol_table, i);
-  Object syms;
-  for (syms = bucket; is_pair(syms); syms = cdr(syms)) {
+  for (Object syms = bucket; is_pair(syms); syms = cdr(syms)) {
     Object a = car(syms);
     assert(is_symbol(a));
     if (string_equal(str, symbol_to_string(a)))
@@ -1079,7 +1109,7 @@ unparse_flonum(char *buf, Object num) {
 
 // RECOVERABLE
 static Object 
-number_to_string(Object num, unsigned radix) {
+number_to_string(Object num, Fixnum radix) {
   char buf[UNPARSED_FLONUM_SIZE + 1];
   assert(is_number(num));
 
@@ -1268,7 +1298,7 @@ multiply(Object n1, Object n2) {
 static Object 
 divide(Object n1, Object n2) {
   if (is_fixnum(n1) && is_fixnum(n2)) {
-    int i1 = fixnum_value(n1), i2 = fixnum_value(n2);
+    Fixnum i1 = fixnum_value(n1), i2 = fixnum_value(n2);
     if (i2 == 0)
       division_by_zero();
     return i1 % i2 == 0 ? make_fixnum(i1 / i2) 
@@ -1755,7 +1785,7 @@ setup(void) {
 fast Object *
 lookup_renv(Object renv, unsigned frame, unsigned offset) {
   for (; 0 < frame; --frame)
-    renv = vector_ref(renv, 0);
+    renv = vector_ref_unsafe(renv, 0);
   assert(offset + 1 < vector_length(renv));
   return vector_ptr(renv) + (offset + 1);
 }
@@ -1815,8 +1845,8 @@ typedef struct Interpreter {
     renv = pop();                                \
     assert(is_vector(top()));                    \
     code = pop();                                \
-    bvec = string_ptr(vector_ref(code, 2));      \
-    constants = vector_ptr(vector_ref(code, 1)); \
+    bvec = string_ptr(vector_ref_unsafe(code, 2));      \
+    constants = vector_ptr(vector_ref_unsafe(code, 1)); \
     pc = fixnum_value(pop());                    \
   } while (0)
 
@@ -2027,7 +2057,7 @@ run_fasl(void) {
   volatile Object codes = read_fasl();
   check_type(is_vector(codes), codes);
 
-  for (volatile int i = 0; i < vector_length(codes); ++i) {
+  for (volatile Fixnum i = 0; i < vector_length(codes); ++i) {
     Object o = vector_ref(codes, i);
     interpret(o, global_renv);
     // Reestablish catcher clobbered by interpret() FIXME

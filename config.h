@@ -8,6 +8,7 @@
 //
 // Word/UWord: pointer-sized integers for tagged pointer manipulation
 // Fixnum: the integer type stored in tagged pointers (currently 62-bit)
+// Normally when we declare a Fixnum type, the value is known to be in the fixnum range.
 
 #include <stdint.h>
 

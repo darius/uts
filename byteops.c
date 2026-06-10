@@ -106,11 +106,10 @@ case bop_params: {
     goto vm_error_label;
   } 
   else {
-    unsigned i;
     Object new_renv = allot_vector(1 + num_formals);
-    vector_set(new_renv, 0, renv);
-    for (i = num_formals; i != 0; --i)
-      vector_set(new_renv, i, pop());
+    vector_set_unsafe(new_renv, 0, renv);
+    for (unsigned i = num_formals; i != 0; --i)
+      vector_set_unsafe(new_renv, i, pop());
     renv = new_renv;
   }
 }
@@ -140,14 +139,14 @@ case bop_rest_params: {
     goto vm_error_label;
   } 
   else {
-    Object new_renv = allot_vector(1 + 1 + min_num_args);
-    vector_set(new_renv, 0, renv);
+    Object new_renv = allot_vector((1 + 1) + min_num_args);
+    vector_set_unsafe(new_renv, 0, renv);
     Object rest_args = nil;
     for (unsigned i = num_args - min_num_args; i != 0; --i)
       rest_args = cons(pop(), rest_args);
-    vector_set(new_renv, 1 + min_num_args, rest_args);
+    vector_set_unsafe(new_renv, 1 + min_num_args, rest_args);
     for (unsigned i = min_num_args; i != 0; --i)
-      vector_set(new_renv, i, pop());
+      vector_set_unsafe(new_renv, i, pop());
     renv = new_renv;
   }
 }
@@ -183,15 +182,15 @@ case bop_invoke: {
   pc = 0;
   code = closure_code(acc);
   renv = closure_renv(acc);
-  constants = vector_ptr(vector_ref(code, 1));
-  bvec = string_ptr(vector_ref(code, 2));
+  constants = vector_ptr(vector_ref_unsafe(code, 1));
+  bvec = string_ptr(vector_ref_unsafe(code, 2));
 #ifdef FUNCTION_PROFILING
   {
-    Object c = vector_ref(code, 5); // 5 = codevec slot for call count
+    Object c = vector_ref_unsafe(code, 5); // 5 = codevec slot for call count
     if (is_fixnum(c)) {
       int count = fixnum_value(c) + 1;
       if (int_is_fixnum(count))
-        vector_set(code, 5, make_fixnum(count));
+        vector_set_unsafe(code, 5, make_fixnum(count));
       if (count == 2)       // don't link in until 2nd hit
         set_global_value(
           all_entered_code_vectors_symbol,
@@ -253,12 +252,12 @@ case bop_get_cc: {
   // Make saved_stack hold a copy of the stack up to the current cont:
   saved_stack = allot_vector(frame_ptr);
   for (i = frame_ptr - 1; 0 <= i; --i)
-    vector_set(saved_stack, i, stack[i]);
+    vector_set_unsafe(saved_stack, i, stack[i]);
 
   // Now give env an env frame:
   env = allot_vector(2);
-  vector_set(env, 0, global_renv);
-  vector_set(env, 1, saved_stack);
+  vector_set_unsafe(env, 0, global_renv);
+  vector_set_unsafe(env, 1, saved_stack);
 
   // Create a closure for the reified cont:
   need(1);
@@ -271,7 +270,6 @@ case bop_set_cc: {
   // stack contents of the cont.  The SET-CC instruction is used
   // only in a situation where the current stack frame is empty,
   // so we don't have to append that frame to the restored cont.
-  int i, limit;
   Object saved_stack = top();
 
   assert(stack_ptr == frame_ptr + 1);
@@ -281,11 +279,11 @@ case bop_set_cc: {
     vm_type_error(saved_stack);
   }
 
-  limit = vector_length(saved_stack);
+  Fixnum limit = vector_length(saved_stack);
   if (stack_limit <= limit)
     fatal_error("Stack in continuation is too big to restore");
-  for (i = limit - 1; 0 <= i; --i)
-    stack[i] = vector_ref(saved_stack, i);
+  for (Fixnum i = limit - 1; 0 <= i; --i)
+    stack[i] = vector_ref_unsafe(saved_stack, i);
   stack_ptr = frame_ptr = limit;
 }
 
@@ -745,7 +743,7 @@ case bop_prim_2: {
     case p2_string_ref: {
       vm_check_type(is_string(x1), x1);
       vm_check_type(is_fixnum(x0), x0);
-      unsigned i = fixnum_value(x0);
+      unsigned i = fixnum_value(x0); // XXX Fixnum
       if (string_length(x1) <= i)
         vm_range_error(i);
       acc = make_char(string_ptr(x1)[i]);
@@ -755,10 +753,7 @@ case bop_prim_2: {
     case p2_vector_ref: {
       vm_check_type(is_vector(x1), x1);
       vm_check_type(is_fixnum(x0), x0);
-      unsigned i = fixnum_value(x0);
-      if (vector_length(x1) <= i)
-        vm_range_error(i);
-      acc = vector_ref(x1, i);
+      acc = vector_ref(x1, fixnum_value(x0));
     }
 
     break;
@@ -1063,10 +1058,7 @@ break; case bop_prim_3: {
     case p3_vector_setB: {
       vm_check_type(is_vector(x2), x2);
       vm_check_type(is_fixnum(x1), x1);
-      unsigned i = fixnum_value(x1);
-      if (vector_length(x2) <= i)
-        vm_range_error(i);
-      vector_set(x2, i, x0);
+      vector_set(x2, fixnum_value(x1), x0);
     }
 
   }
