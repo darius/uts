@@ -18,6 +18,7 @@ static clock_t clock_start;     // needed by (%runtime)
 
 typedef enum { false=0, true=1 } Flag;
 
+typedef unsigned char Char;
 
 typedef enum {
   a_flonum, an_input_port, an_output_port, a_string,
@@ -26,9 +27,6 @@ typedef enum {
 } Tag;
 
 
-// Fixnum, FIXNUM_MIN, FIXNUM_MAX, FIXNUM_MASK defined in config.h
-typedef unsigned char Char;
-
 fast Flag
 int_is_fixnum(Fixnum i) {
   // Unsigned comparison trick: (i - MIN) <= (MAX - MIN)
@@ -36,8 +34,10 @@ int_is_fixnum(Fixnum i) {
 }
 
 
+enum { obj_size_bits = 29, obj_size_limit = 1<<obj_size_bits };
+
 typedef struct Object_header {
-  unsigned size      :29;
+  unsigned size      : obj_size_bits;
   unsigned tag       : 3;   // if any more types, have to expand to 4 bits
 #if __SIZEOF_POINTER__ > 4
   unsigned _pad;            // padding for 64-bit alignment
@@ -155,7 +155,7 @@ fast Object make_boolean(Flag flag) { return flag ? obj_true : obj_false; }
 
 fast Object make_char(Char c)       { return (Object) (((UWord)c << 4) | 0x03); }
 fast Char char_value(Object obj)    { assert(is_char(obj));
-                                      return object_bits(obj) >> 4; }
+                                      return (Char) (object_bits(obj) >> 4); }
 
 fast Object make_fixnum(Fixnum n)   { assert(int_is_fixnum(n));
                                       return (Object) (((UWord)n << 2) | 0x01); }
@@ -218,28 +218,26 @@ check_type(Flag flag, Object obj) {
 fast Object 
 allot(Tag tag, size_t size) {
   assert(0 <= tag && tag < num_tags);
-  {
-    Object_header *header = (Object_header *) GC_malloc(sizeof *header + size);
-    if (header == NULL)
-      heap_error();
-    header->size = size;
-    header->tag = tag;
-    return header;
-  }
+  assert(size < obj_size_limit);
+  Object_header *header = (Object_header *) GC_malloc(sizeof *header + size);
+  if (header == NULL)
+    heap_error();
+  header->size = size;
+  header->tag = tag;
+  return header;
 }
 
 fast Object 
 allot_atomic(Tag tag, size_t size) {
   assert(0 <= tag && tag < num_tags);
-  {
-    Object_header *header = 
-      (Object_header *) GC_malloc_atomic(sizeof *header + size);
-    if (header == NULL)
-      heap_error();
-    header->size = size;
-    header->tag = tag;
-    return header;
-  }
+  assert(size < obj_size_limit);
+  Object_header *header = 
+    (Object_header *) GC_malloc_atomic(sizeof *header + size);
+  if (header == NULL)
+    heap_error();
+  header->size = size;
+  header->tag = tag;
+  return header;
 }
 
 fast unsigned 
@@ -326,6 +324,7 @@ close_port(Object port) {
 
 static void
 port_finalizer(GC_PTR port_obj, GC_PTR _) {
+  (void)_;
   close_port((Object) port_obj);
 }
 

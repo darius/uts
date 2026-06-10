@@ -7,7 +7,7 @@
 // Portable type definitions
 //
 // Word/UWord: pointer-sized integers for tagged pointer manipulation
-// Fixnum: the integer type stored in tagged pointers (currently 30-bit)
+// Fixnum: the integer type stored in tagged pointers (currently 62-bit)
 
 #include <stdint.h>
 
@@ -34,8 +34,3 @@ typedef int64_t   Fixnum;    // integer value in tagged fixnums
 #define UNPARSED_FLONUM_SIZE 1024
 
 #define fast static inline
-
-// Legacy type aliases - to be removed
-#define int32      int32_t
-#define unsigned32 uint32_t
-#define int64      int64_t
