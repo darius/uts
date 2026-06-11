@@ -718,7 +718,7 @@ string_hash(Object str) {
   const Char *s = string_ptr(str);
   UWord acc = 0;
   for (Fixnum l = string_length(str); l != 0; ++s, --l)
-    acc = acc * 2 + *s;
+    acc = acc * 3 + *s;
   return acc;
 }
 
