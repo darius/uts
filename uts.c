@@ -95,10 +95,10 @@ vm_error(const char *message, Object irritant) {
 }
 
 #ifndef NDEBUG
-fast void 
-assert(Flag flag) { 
-  if (!flag)
-    fatal_error("Can't happen");
+#define assert(flag) do { if (!(flag)) failed_assertion(); } while(0)
+static void
+failed_assertion(void) {
+  fatal_error("Can't happen");
 }
 #else
 #define assert(flag)
@@ -125,7 +125,7 @@ object_tag(Object obj) {
 fast void *
 data_ptr(Object obj) {
   assert(is_boxed(obj));
-  return (char *) obj + sizeof(Object_header);
+  return (char*)obj + sizeof(Object_header);
 }
 
 fast Tag 
@@ -275,8 +275,6 @@ string_cstr(Object obj) {
 
 static Flag 
 string_equal(Object str1, Object str2) {
-  assert(is_string(str1));
-  assert(is_string(str2));
   unsigned L = string_length(str1);
   if (string_length(str2) != L)
     return false;
@@ -296,7 +294,7 @@ struct File_port {
 
 fast struct File_port *
 port_ptr(Object port) {
-  assert(is_port(port));
+  assert(is_input_port(port) || is_output_port(port));
   return (struct File_port *) data_ptr(port);
 }
 
@@ -355,7 +353,6 @@ object_to_c_string(char *buffer, size_t size, Object str) {
 
 static char *
 string_to_c(Object string) {
-  assert(is_string(string));
   int size = 1 + string_length(string);
   char *s = (char *) GC_malloc_atomic(size);
   if (s == NULL)
@@ -422,14 +419,14 @@ fast Object
 field_ref(Object obj, size_t index) {   // XXX s/size_t/Fixnum ?
   assert(is_boxed(obj));
   assert(index < object_header(obj).size / sizeof(Object));
-  return ((Object *) data_ptr(obj))[index];
+  return ((Object*)data_ptr(obj))[index];
 }
 
 fast void 
 field_set(Object obj, size_t index, Object value) {   // XXX s/size_t/Fixnum ?
   assert(is_boxed(obj));
   assert(index < object_header(obj).size / sizeof(Object));
-  ((Object *) data_ptr(obj))[index] = value;
+  ((Object*)data_ptr(obj))[index] = value;
 }
 
 
@@ -490,7 +487,6 @@ vector_set_unsafe(Object vec, Fixnum index, Object value) {
 
 static void 
 vector_fill(Object vec, Object filler) {
-  assert(is_vector(vec));
   Fixnum limit = vector_length(vec);
   for (Fixnum i = 0; i < limit; ++i)
     vector_set_unsafe(vec, i, filler);
@@ -678,7 +674,6 @@ again:
 // RECOVERABLE
 static void
 display_string(Object str, FILE *out) {
-  assert(is_string(str));
   Fixnum sl = string_length(str);
   const Char *s = string_ptr(str);
   for (Fixnum i = 0; i < sl; ++i)
@@ -712,7 +707,6 @@ make_symbol(Object str) {
 
 static Object
 string_copy(Object str) {
-  assert(is_string(str));
   unsigned l = string_length(str);
   Object str2 = allot_atomic(a_string, l);
   memcpy(string_ptr(str2), string_ptr(str), l);
@@ -721,7 +715,6 @@ string_copy(Object str) {
 
 static UWord
 string_hash(Object str) {
-  assert(is_string(str));
   const Char *s = string_ptr(str);
   UWord acc = 0;
   for (Fixnum l = string_length(str); l != 0; ++s, --l)
@@ -731,13 +724,10 @@ string_hash(Object str) {
 
 static Object
 string_to_symbol(Object str) {
-  assert(is_string(str));
-  assert(is_vector(symbol_table));
   Fixnum i = string_hash(str) % (UWord)vector_length(symbol_table);
   Object bucket = vector_ref(symbol_table, i);
   for (Object syms = bucket; is_pair(syms); syms = cdr(syms)) {
     Object a = car(syms);
-    assert(is_symbol(a));
     if (string_equal(str, symbol_to_string(a)))
       return a;
   }
@@ -1111,7 +1101,6 @@ unparse_flonum(char *buf, Object num) {
 static Object 
 number_to_string(Object num, Fixnum radix) {
   char buf[UNPARSED_FLONUM_SIZE + 1];
-  assert(is_number(num));
 
   if (is_fixnum(num)) {
     if (!(2 <= radix && radix <= 36))
@@ -1902,6 +1891,7 @@ enter_interpreter(Interpreter *interp) {
 
   // The bytecode execution loop
   for (;;) {
+    // (Probably the most expensive asserts in this whole program, if DEBUG is on:)
     assert(pc < string_length(vector_ref(code, 2)));
     assert(frame_ptr <= stack_ptr && stack_ptr < stack_limit);
 
@@ -1914,7 +1904,6 @@ enter_interpreter(Interpreter *interp) {
 #ifdef BYTEOP_PROFILING
     byteop_count[previous_byteop][byteop] += 1;
 #endif
-
 #ifdef STACK_DEPTH_PROFILING
     stack_depth_count[stack_ptr - frame_ptr] += 1;
 #endif

@@ -12,7 +12,7 @@ PREFIX ?= /usr/local
 ifdef DEBUG
   CFLAGS = $(BASE_CFLAGS) -g
 else
-  CFLAGS = $(BASE_CFLAGS) -g -O2 -DNDEBUG
+  CFLAGS = $(BASE_CFLAGS) -g -O3 -DNDEBUG
 endif
 
 all: uts
