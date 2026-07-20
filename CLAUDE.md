@@ -29,7 +29,7 @@ make install
 
 - **Boehm GC**: Required. The `configure` script auto-detects it from: local `gc/` subdirectory, pkg-config, or common prefixes (/usr/local, /opt/homebrew, /usr)
 - **GCC**: Required for `inline` functions and 64-bit `long long int` support
-- **AWK**: Required to generate `instruc-cases.c` from `instrucs.c`
+- **AWK**: Required to generate `opcodes.h`/`opcodes.scm` from `instrucs`, and `prims.h`/`primcodes.scm` from `prims`
 - A Scheme system to bootstrap from. Choices known to work are Chez Scheme, Guile, and (if you have a prebuilt binary) UTS itself.
 
 ## Running
@@ -66,7 +66,7 @@ by both. (TODO maybe worth elaborating)
 ### Core Components
 
 - **uts.c**: Main C interpreter with bytecode VM, object representation, reader/writer, and garbage collection interface
-- **byteops.c**: a case for each byteop, #included in `uts.c`.
+- **byteops.c**: a case for each byteop, plus the C-coded primitives (`p0_*`/`p1_*`/`p2_*`/`p3_*`); #included in `uts.c`.
 - **config.h**: Platform-specific configuration (word sizes, stack limits)
 - **abcs/primitives.scm**: the R4RS primitive procedures that aren't in C.
 - **abcs/read.scm**: `read` is big enough to get its own file.
@@ -119,7 +119,14 @@ encoding with zigzag for signed values.
 ## Testing and Benchmarking
 
 ```bash
-# Run R4RS test suite
+# Run the whole unit-test suite (= ./run-tests then test/run-tests)
+make test
+
+# Quick smoke test: just test/test.scm, one line of output on success
+./run-tests
+
+# Full suite: examples.scm, test.scm, r4rs.scm, r4rs-supplement.scm,
+# error-tests.scm (each exits nonzero on failure)
 test/run-tests
 
 # Run corpus tests (real Scheme programs)
@@ -150,6 +157,21 @@ Benchmark results are stored in `bench-results/` with commit-stamped filenames. 
 - **miasma**: x86 assembler generator
 
 Tests compare output against reference files using `%system` to call external `diff`. Note: the interpreter checks most of its own work here, so bugs in core primitives could affect test reliability.
+
+## Known bugs and in-flight work
+
+- **notes/code-review-2026-07.md**: findings from a July 2026 review of
+  the C core, with literal repros — silent wrong answers (expt, 32-bit
+  index truncations, arithmetic-shift UB), fatal_errors that should be
+  recoverable vm_errors, and a broken write/read roundtrip.
+- **`make test` currently fails, on purpose**: the `expt` section of
+  test/r4rs-supplement.scm has tests for exact results above 2^53
+  (review item A1: `expt` rounds through `pow()`). They stay red until
+  that's fixed; other failures are real regressions.
+- **pending-fixnum-offsets/**: stalled promotion of vector/string
+  offsets from inconsistent 32-bit types to 64 bits. Initial attempts
+  showed a measurable slowdown, so it's waiting on a more systematic
+  benchmark suite before retrying.
 
 ## 64-bit Port
 
