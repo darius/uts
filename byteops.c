@@ -431,10 +431,7 @@ case bop_prim_1: {
       if (is_flonum(x0)) {
         // R4RS doesn't say how to round 0.5 here; this is convenient:
         double d = floor(flonum_value(x0) + 0.5);
-        // Is d in fixnum range? NB the upper comparison is tricky
-        // because FIXNUM_MAX is not exactly representable as an IEEE
-        // double.
-        if (FIXNUM_MIN <= d && d < (FIXNUM_MAX+1))
+        if (is_double_in_fixnum_range(d))
           acc = make_fixnum((Fixnum) d);
         else {
           acc = x0;

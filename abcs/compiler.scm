@@ -136,6 +136,7 @@
 
   (define (%lap/offset pos lap)
     (let ((offset (- (%lap/position lap) pos)))
+      (if (< 65535 offset) (%error "Code too complex: offset >=64k" offset))
       (cons (quotient offset 256)
 	    (cons (remainder offset 256)
 		  lap))))

@@ -1174,15 +1174,22 @@ as_double(Object n) {
   return fixnum_value(n);
 }
 
+fast int
+is_double_in_fixnum_range(double d) {
+  // NB the upper comparison is tricky because FIXNUM_MAX is not
+  // exactly representable as an IEEE double.
+  return FIXNUM_MIN <= d && d < FIXNUM_MAX+1;
+}
+
 // RECOVERABLE
-static int
-as_int(Object n) {
+static Fixnum
+as_fixnum(Object n) {
   if (is_flonum(n)) {
     double d = flonum_value(n);
     // Check range before casting to avoid UB
-    if (d < INT_MIN || d > INT_MAX || d != floor(d))
+    if (!is_double_in_fixnum_range(d) || d != floor(d))
       vm_error("Not an integer", n);
-    return (int) d;
+    return (Fixnum) d;
   }
   if (!is_fixnum(n))
     type_error(n);
@@ -1491,13 +1498,13 @@ undump_string(void) {
 }
 
 #define PUSH(x) do {                   \
-        if (FASL_STACK_SIZE <= sp)          \
+        if (FASL_STACK_SIZE <= sp)     \
           stack_error();               \
         stack_base[sp++] = (x);        \
                 } while (0)
 
 #define POP(x) do {                    \
-        if (sp < 0)                    \
+        if (sp <= 0)                   \
           stack_error();               \
         (x) = stack_base[--sp];        \
                } while (0)
@@ -1597,8 +1604,8 @@ read_fasl(void) {
 
 static Object
 integer_to_char(Object x0) {
-  unsigned n = as_int(x0);
-  if (256 <= n)
+  Fixnum n = as_fixnum(x0);
+  if (n < 0 || 256 <= n)
     range_error(n);
   return make_char(n);
 }
@@ -1667,7 +1674,7 @@ expt(Object x1, Object x0) {
     // but for now it's a case we have to deal with.)
     // TODO (after benchmark) maybe just always do it this way for fixnum inputs,
     //    not even trying to funnel into pow()
-    if (FIXNUM_MIN <= p && p < (FIXNUM_MAX+1)) { // see p1_inexactTOexact about this test
+    if (is_double_in_fixnum_range(p)) {
       Object acc = make_fixnum(1);
       Object multiplier = x1;
       for (; power != 0; power /= 2) {

@@ -141,6 +141,7 @@
 ;; integer->char out of range
 (test-error "(integer->char 300)" (lambda () (integer->char 300)))
 (test-error "(integer->char -1)" (lambda () (integer->char -1)))
+(test-error "(integer->char <bigint>)" (lambda () (integer->char (+ (expt 2 32) 65))))
 
 ;; make-vector/make-string with bad size
 (test-error "(make-vector -1 'x)" (lambda () (make-vector -1 'x)))
