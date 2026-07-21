@@ -114,6 +114,15 @@
 (test 27 expt 3 3)
 (test 81 expt 3 4)
 
+;; Exact results above 2^53: must not be rounded through a double.
+;; These fit in a 62-bit fixnum but not in a double's mantissa.
+;; Known bug: expt uses pow(); see notes/code-review-2026-07.md item A1.
+(test 1350851717672992089 expt 3 38)
+(test 1490116119384765625 expt 5 26)
+(test 0 - (expt 3 38) (* 3 (expt 3 37)))
+(test 1152921504606846976 expt 2 60)  ; near fixnum limit, exactly a power of 2
+(test #t inexact? (expt 2 62))        ; overflows fixnums: falls back to flonum
+
 ;; Negative exponents (result is float)
 (test-approx 0.5 expt 2 -1)
 (test-approx 0.25 expt 2 -2)

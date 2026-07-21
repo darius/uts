@@ -25,6 +25,10 @@ typedef int64_t   Fixnum;    // integer value in tagged fixnums
 #define FIXNUM_MAX   ((1LL << (FIXNUM_BITS - 1)) - 1)
 #define FIXNUM_MASK  FIXNUM_MAX
 
+// Where the shared fixnum/flonum range ends: the largest double-float
+// integer with a double-float-representable predecessor
+#define FLONUM_FIXNUM_MAX ((double)(1LL << 53))
+
 // Arithmetic right shift by 2 (for extracting fixnum value)
 #define ashr2(w)     ((Word)(w) >> 2)
 

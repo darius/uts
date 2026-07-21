@@ -1652,16 +1652,29 @@ prim_flush_input_line(Object x0) {
 
 static Object
 expt(Object x1, Object x0) {
-  if (is_fixnum(x1) && is_fixnum(x0)) {
-    double p = pow(fixnum_value(x1), fixnum_value(x0));
-    // Try to return exact fixnum if possible. Must check:
-    // 1. p is in int64 range (to avoid UB in cast)
-    // 2. Conversion is exact (round-trip check)
-    // 3. Result fits in fixnum range
-    if (p >= (double)INT64_MIN && p < (double)INT64_MAX) {
+  if (is_fixnum(x1) && is_fixnum(x0) && 0 <= fixnum_value(x0)) {
+    Fixnum power = fixnum_value(x0);
+    double p = pow(fixnum_value(x1), power);
+    // Return an exact fixnum if we can.
+    if (p >= -FLONUM_FIXNUM_MAX && p <= FLONUM_FIXNUM_MAX) {
       Fixnum i = (Fixnum) p;
-      if ((double)i == p && int_is_fixnum(i))
-        return make_fixnum(i);
+      assert(int_is_fixnum(i) && (double)i == p);
+      return make_fixnum(i);
+    }
+    // The result might still be in fixnum range, just outside the shared range
+    // where we know pow()->int will be correct.
+    // (Maybe it was a mistake to have any non-double-representable fixnums,
+    // but for now it's a case we have to deal with.)
+    // TODO (after benchmark) maybe just always do it this way for fixnum inputs,
+    //    not even trying to funnel into pow()
+    if (FIXNUM_MIN <= p && p < (FIXNUM_MAX+1)) { // see p1_inexactTOexact about this test
+      Object acc = make_fixnum(1);
+      Object multiplier = x1;
+      for (; power != 0; power /= 2) {
+        if (power & 1) acc = multiply(acc, multiplier);
+        multiplier = multiply(multiplier, multiplier);
+      }
+      return acc;
     }
     return make_flonum(p);
   }

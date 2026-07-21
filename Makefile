@@ -30,7 +30,7 @@ init.c: build-init load-init.scm build-init.scm opcodes.scm primcodes.scm abcs/p
 	./build-init
 	mv new-init.c init.c
 
-test:
+test: uts
 	./run-tests
 	test/run-tests
 
