@@ -183,6 +183,13 @@ is_natnum(Object obj) {   // tag trickery
   return (object_bits(obj) & (WORD_HIGHBIT | 0x03)) == 0x01;
 }
 
+fast int
+is_double_in_fixnum_range(double d) {
+  // NB the upper comparison is tricky because FIXNUM_MAX is not
+  // exactly representable as an IEEE double.
+  return FIXNUM_MIN <= d && d < FIXNUM_MAX+1;
+}
+
 
 static void 
 type_error(Object obj) {
@@ -1050,8 +1057,7 @@ scan_real_done:
   if (errno != 0 || *end != '\0')
     return obj_false;
   if (saw_exactness_prefix && expect_exact) { // case like #e<decimalfloat>
-    // Same conversion logic as the inexact->exact primitive: (TODO unify the code?)
-    if (d == floor(d) && FIXNUM_MIN <= d && d < (FIXNUM_MAX+1))
+    if (d == floor(d) && is_double_in_fixnum_range(d))
       return make_fixnum((Fixnum) d);
     return obj_false;
   }
@@ -1172,13 +1178,6 @@ as_double(Object n) {
   if (!is_fixnum(n))
     type_error(n);
   return fixnum_value(n);
-}
-
-fast int
-is_double_in_fixnum_range(double d) {
-  // NB the upper comparison is tricky because FIXNUM_MAX is not
-  // exactly representable as an IEEE double.
-  return FIXNUM_MIN <= d && d < FIXNUM_MAX+1;
 }
 
 // RECOVERABLE
