@@ -933,9 +933,9 @@ string_to_number(Object str, unsigned radix) {
   else {              // radix = 10, floats allowed
     // uint[R]:                d[R]+ #*
     // decimal[10]:            d[10]+                suffix
-    // |           . d[10]+ #* suffix
-    // | d[10+     . d[10]* #* suffix
-    // | d[10]+ #+ .        #* suffix
+    //                       |           . d[10]+ #* suffix
+    //                       | d[10]+    . d[10]* #* suffix
+    //                       | d[10]+ #+ .        #* suffix
     Flag digits_allowed = true, digits_required = true;
     while (isdigit(c)) {
       digits_required = false;
