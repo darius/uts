@@ -135,6 +135,10 @@
 (test-error "(string-ref \"hi\" -1)" (lambda () (string-ref "hi" -1)))
 (test-error "(string-ref \"\" 0)" (lambda () (string-ref "" 0)))
 
+(test-error "string-ref s <huge>" (lambda () (string-ref "abcdef" (expt 2 32))))
+(test-error "string-set! s <huge>" (lambda () (let ((s (make-string 4 #\X)))
+                                                (string-set! s (+ (expt 2 32) 2) #\Z))))
+
 ;; list-ref out of range
 (test-error "(list-ref '(a b) 5)" (lambda () (list-ref '(a b) 5)))
 
@@ -146,6 +150,7 @@
 ;; make-vector/make-string with bad size
 (test-error "(make-vector -1 'x)" (lambda () (make-vector -1 'x)))
 (test-error "(make-string -1 #\\x)" (lambda () (make-string -1 #\x)))
+(test-error "make-string <huge>" (lambda () (string-length (make-string (expt 2 32) #\a))))
 
 ;; substring range errors
 (test-error "(substring \"hi\" 0 10)" (lambda () (substring "hi" 0 10)))

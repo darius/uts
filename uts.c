@@ -539,8 +539,15 @@ c_string(const char *string) {
   return s;
 }
 
+static void
+string_size_error(Fixnum length) {
+  vm_error("Can't make a string of out-of-range length", make_fixnum(length));
+}
+
 fast Object
-make_string(unsigned length) {
+make_string(size_t length) {
+  if (obj_size_limit <= length)
+    string_size_error(length);
   return allot_atomic(a_string, length);
 }
 
@@ -1472,6 +1479,7 @@ read_unsigned8(void) {
   return fasl_next();
 }
 
+// XXX overflow check, and probably want to make it Fixnum type
 static int64_t
 read_int(void) {
   // 7-bit varint with zigzag decoding
@@ -1489,7 +1497,7 @@ read_int(void) {
 
 static Object 
 undump_string(void) {
-  int i, n = read_int();
+  Fixnum i, n = read_int();
   Object str = make_string(n);
   unsigned char *s = string_ptr(str);
   for (i = 0; i < n; ++i)
@@ -1542,13 +1550,13 @@ read_fasl(void) {
         PUSH(o3);
       break;
       case ini_ref: {
-        int i = read_int();
+        Fixnum i = read_int();
         if (i < 0 || nseen <= i) vm_error("=ref out of range", make_fixnum(i));
         PUSH(vector_ref(seen_vector, i));
       }
       break;
       case ini_vector: {
-        int i, n = read_int();
+        Fixnum i, n = read_int();
         Object vec = make_vector(n, nil);
         Object *v = vector_ptr(vec);
         for (i = 0; i < n; ++i)
@@ -1562,7 +1570,7 @@ read_fasl(void) {
         PUSH(make_closure(o1, o2));
       break;
       case ini_symbol: {
-        int i, n = read_int();
+        Fixnum i, n = read_int();
         Object str = make_string(n);
         unsigned char *s = string_ptr(str);
         for (i = 0; i < n; ++i)

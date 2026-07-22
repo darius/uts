@@ -740,8 +740,8 @@ case bop_prim_2: {
     case p2_string_ref: {
       vm_check_type(is_string(x1), x1);
       vm_check_type(is_fixnum(x0), x0);
-      unsigned i = fixnum_value(x0); // XXX Fixnum
-      if (string_length(x1) <= i)
+      Fixnum i = fixnum_value(x0);
+      if (i < 0 || string_length(x1) <= i)
         vm_range_error(i);
       acc = make_char(string_ptr(x1)[i]);
     }
@@ -937,7 +937,7 @@ case bop_prim_2: {
     case p2_make_string: {
       must_be_natnum(x1);
       vm_check_type(is_char(x0), x0);
-      unsigned L = fixnum_value(x1);
+      Fixnum L = fixnum_value(x1);
       acc = make_string(L);
       memset(string_ptr(acc), char_value(x0), L);
     }
@@ -1045,8 +1045,8 @@ break; case bop_prim_3: {
       vm_check_type(is_string(x2), x2);
       vm_check_type(is_fixnum(x1), x1);
       vm_check_type(is_char(x0), x0);
-      unsigned i = fixnum_value(x1);
-      if (string_length(x2) <= i)
+      Fixnum i = fixnum_value(x1);
+      if (i < 0 || string_length(x2) <= i)
         vm_range_error(i);
       string_ptr(x2)[i] = char_value(x0);
     }
