@@ -1022,20 +1022,21 @@ scan_real_done:
   //        xp: "#e": saw_exactness_prefix = true,  expect_exact = true
   //        xp: "#i": saw_exactness_prefix = false, expect_exact = false
 
-  //   str    | is_e | radix | xp | what to do
-  //   42     | yes  |    10 |    | use strtoll, backstop with strtod on overflow
-  //   #e42   | yes  |    10 | #e | use strtoll
-  //   #x42   | yes  |  !=10 |    | use strtoll
-  //   #x#e42 | yes  |  !=10 | #e | use strtoll
-  //   #x#i42 | yes  |  !=10 | #i | use strtoll, coerce to flonum
+  //  str    | is_e | radix | xp || what to do
+  //  ----------------------------------------
+  //  42     | yes  |    10 |    || use strtoll, or strtod on overflow
+  //  #e42   | yes  |    10 | #e || use strtoll
+  //  #x42   | yes  |  !=10 |    || use strtoll
+  //  #x#e42 | yes  |  !=10 | #e || use strtoll
+  //  #x#i42 | yes  |  !=10 | #i || use strtoll, coerce to flonum
 
-  //   #x42.0 | no   |  !=10 |    | #f
-  //   #x#e1.0| no   |  !=10 | #e | #f
-  //   #x#i42.| no   |  !=10 | #i | #f
+  //  #x42.0 | no   |  !=10 |    || #f
+  //  #x#e1.0| no   |  !=10 | #e || #f
+  //  #x#i42.| no   |  !=10 | #i || #f
 
-  //   #e42.0 | no   |    10 | #e | use strtod, coerce to fixnum
-  //   42.0   | no   |    10 |    | use strtod
-  //   #i42   | ?    |    10 | #i | use strtod
+  //  #e42.0 | no   |    10 | #e || use strtod, coerce to fixnum
+  //  42.0   | no   |    10 |    || use strtod
+  //  #i42   | ?    |    10 | #i || use strtod
 
   if (is_exact) {
     char *end;
