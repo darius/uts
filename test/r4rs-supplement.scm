@@ -307,9 +307,10 @@
 
 (test "0" number->string 0)
 (test "-1" number->string -1)
-;; R4RS specifies lowercase: "ff", but UTS returns "FF"
-;; Uncomment to test R4RS compliance:
-;; (test "ff" number->string 255 16)
+;; TODO resolve the following claim from Claude which I couldn't confirm in R4RS:
+;;   R4RS specifies lowercase: "ff", but UTS returns "FF"
+;;   Uncomment to test R4RS compliance:
+;;   (test "ff" number->string 255 16)
 (test "FF" number->string 255 16)  ; UTS-specific: uppercase
 (test "377" number->string 255 8)
 (test "11111111" number->string 255 2)
@@ -323,6 +324,8 @@
 (test #f string->number "")
 (test #f string->number "abc")
 (test #f string->number "12.34.56")
+(test #f string->number (make-string 2000 #\1))  ; UTS-specific: no bignums, and too long to parse as a float
+(test 1e300 string->number (make-string 300 #\9))  ; UTS-specific: not too long, but inexact (TODO is this actually compliant?)
 
 ;;;
 ;;; INTEGER? with floats
