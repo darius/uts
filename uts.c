@@ -824,9 +824,12 @@ convert_digit(Char c, int radix) {
 }
 
 static Object 
-string_to_number(Object str, unsigned radix) {
+string_to_number(Object str, Fixnum radix) {
   if (radix < 2 || 36 < radix)
-    return obj_false;   // TODO or should we raise an error?
+    return obj_false;
+
+  const Char *s = string_ptr(str);
+  size_t n = string_length(str);
 
   // The grammar for real numbers, where R is the radix, from R4RS:
 
@@ -851,8 +854,6 @@ string_to_number(Object str, unsigned radix) {
   // r[16]:             # x
   // d[R]:              <digit of radix R>
 
-  const Char *s = string_ptr(str);
-  unsigned n = string_length(str);
   char buffer[UNPARSED_FLONUM_SIZE + 1], *buf = buffer;
   unsigned i = 0;               // index of next char in str
   Char c;                       // current char in str
@@ -862,7 +863,7 @@ string_to_number(Object str, unsigned radix) {
   Flag saw_exactness_prefix = false;
 
   // I assume the contents of buffer is never shorter than str...
-  if (sizeof buffer < n + 2)
+  if (sizeof buffer - 2 < n)
     fatal_error("Buffer overrun");
 
   // First we scan over the string collecting info on exactness, radix,
@@ -1161,8 +1162,15 @@ read_atom(FILE *in, int c) {
         ungetc(c, in);
         goto done;
       }
+      // FIXME: hard limit. Not worth fixing yet because, ultimately,
+      // going to async I/O and our own GC will change how we handle
+      // these things. The reason the error is currently fatal is to
+      // avoid the case where we're reading stdin, we signal this
+      // error mid-token, and then the repl starts reading the rest of
+      // the token as a command. (That needs a more general fix over
+      // in the dev-env error-handler code.)
       if (buf + sizeof buf - 1 <= b)
-        fatal_error("Buffer overflow"); // FIXME: hard limit
+        fatal_error("Buffer overflow in read_atom");
       *b++ = tolower(c);
     }
   }
