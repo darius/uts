@@ -854,7 +854,6 @@ string_to_number(Object str, Fixnum radix) {
   // r[16]:             # x
   // d[R]:              <digit of radix R>
 
-  char buffer[UNPARSED_FLONUM_SIZE + 1], *buf = buffer;
   unsigned i = 0;               // index of next char in str
   Char c;                       // current char in str
 
@@ -862,19 +861,26 @@ string_to_number(Object str, Fixnum radix) {
   Flag expect_exact = true;
   Flag saw_exactness_prefix = false;
 
-  // I assume the contents of buffer is never shorter than str...
-  if (sizeof buffer - 2 < n)
-    fatal_error("Buffer overrun");
-
   // First we scan over the string collecting info on exactness, radix,
-  // etc., and transcribing it into buffer in a format that strtod or
+  // etc., and transcribing it into the buffer in a format that strtod or
   // strtol can understand, and with leading and trailing whitespace trimmed.
+
+  char buffer[UNPARSED_FLONUM_SIZE + 1], *buf_start = buffer;
 
   while (i < n && isspace(s[i]))
     ++i;
   if (i == n) return obj_false;
-  c = s[i++];
 
+  // Ensure enough buffer capacity.
+  // TODO what does size-2 count as extra besides the \0 byte? Is there a
+  // potential extra byte appended by the logic below? Is 2 just a braino?
+  if (sizeof buffer - 2 < n - i) {
+    buf_start = GC_malloc_atomic(n - i + 2);
+    if (buf_start == NULL) heap_error();
+  }
+  char *buf = buf_start; // where to append the next byte into the buffer
+
+  c = s[i++];
   {
     Flag saw_radix_prefix = false;
     while (c == '#') {
@@ -1048,7 +1054,7 @@ scan_real_done:
 
   if (is_exact) {
     char *end;
-    long long ival = (errno = 0, strtoll(buffer, &end, radix));
+    long long ival = (errno = 0, strtoll(buf_start, &end, radix));
     if (errno == 0 && *end == '\0') {
       if (expect_exact && int_is_fixnum(ival)) // xp is either "" or "#e"
         return make_fixnum(ival);
@@ -1062,7 +1068,7 @@ scan_real_done:
     return obj_false;
 
   char *end;
-  double d = (errno = 0, strtod(buffer, &end));
+  double d = (errno = 0, strtod(buf_start, &end));
   if (errno != 0 || *end != '\0')
     return obj_false;
   if (saw_exactness_prefix && expect_exact) { // case like #e<decimalfloat>
@@ -1136,7 +1142,7 @@ number_to_string(Object num, Fixnum radix) {
 // RECOVERABLE
 static Object
 read_atom(FILE *in, int c) {
-  char buf[1024];
+  char buf[2048];
   char *b = buf;
   *b++ = tolower(c);
 
