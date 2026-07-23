@@ -852,9 +852,9 @@ string_to_number(Object str, unsigned radix) {
   // d[R]:              <digit of radix R>
 
   const Char *s = string_ptr(str);
-  int n = string_length(str);
+  unsigned n = string_length(str);
   char buffer[UNPARSED_FLONUM_SIZE + 1], *buf = buffer;
-  int i = 0;                    // index of next char in str
+  unsigned i = 0;               // index of next char in str
   Char c;                       // current char in str
 
   Flag is_exact = true;
@@ -1439,7 +1439,7 @@ put_object(FILE *file, Object obj, Flag displaying) {
       break;
     case a_vector:
       put_string("#(", file);
-      for (int i = 0; i < vector_length(obj); ++i) {
+      for (Fixnum i = 0; i < vector_length(obj); ++i) {
         if (i != 0)
           put_char(' ', file);
         put_object(file, vector_ref(obj, i), displaying);
@@ -1819,7 +1819,7 @@ unexpected_vm_error(void) {
 typedef struct Interpreter {
   Object stack_vec;
   Object code, renv;
-  int pc, stack_ptr, frame_ptr;
+  unsigned pc, stack_ptr, frame_ptr;
 } Interpreter;
 
 

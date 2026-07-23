@@ -84,7 +84,7 @@ case bop_proc: {
 break;
 case bop_params: {
   unsigned num_formals = get_byte();
-  int num_args = stack_ptr - frame_ptr; // assumes stack grows upward
+  unsigned num_args = stack_ptr - frame_ptr; // assumes stack grows upward
   if (num_args != num_formals) { 
     Object arguments = nil;
     while (frame_ptr < stack_ptr)
@@ -223,7 +223,7 @@ case bop_apply: {
   else {
     Object list = top(), rest = list;
     Object proc = stack[frame_ptr];
-    int i;
+    unsigned i;
     for (i = frame_ptr; i < stack_ptr - 2; ++i)
       stack[i] = stack[i+1];
     stack_ptr = i;
