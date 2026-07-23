@@ -567,7 +567,7 @@ cdr(Object pair) {
 }
 
 // RECOVERABLE
-static int                      // unsigned?
+static Fixnum
 list_length(Object list) {
   Object ls = list;
   int l = 0;
