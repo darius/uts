@@ -808,7 +808,7 @@ flush_input_line(FILE *in) {
 
 // Pre: 2 <= radix <= 36
 static int
-convert_digit(char c, int radix) {
+convert_digit(Char c, int radix) {
   int digit;
   if (c < '0')
     return -1;
@@ -851,11 +851,11 @@ string_to_number(Object str, unsigned radix) {
   // r[16]:             # x
   // d[R]:              <digit of radix R>
 
-  const char *s = string_cstr(str);
+  const Char *s = string_ptr(str);
   int n = string_length(str);
   char buffer[UNPARSED_FLONUM_SIZE + 1], *buf = buffer;
   int i = 0;                    // index of next char in str
-  char c;                       // current char in str
+  Char c;                       // current char in str
 
   Flag is_exact = true;
   Flag expect_exact = true;
@@ -1320,12 +1320,12 @@ divide(Object n1, Object n2) {
 
 static void 
 write_string(FILE *file, Object str) {
-  const char *s = string_cstr(str);
-  int i, l = string_length(str);
-  
+  const Char *s = string_ptr(str);
+  unsigned i, len = string_length(str);
+
   put_char('"', file);
-  for (i = 0; i < l; ++i) {
-    char c = s[i];
+  for (i = 0; i < len; ++i) {
+    Char c = s[i];
     if (c == '"' || c == '\\')
       put_char('\\', file);
     if (isprint(c))
@@ -1353,7 +1353,7 @@ put_object(FILE *file, Object obj, Flag displaying) {
       else if (is_unbound(obj))
         put_string("#!unbound", file);
       else if (is_char(obj)) {
-        char c = char_value(obj);
+        Char c = char_value(obj);
         if (displaying)
           put_char(c, file);
         else {
