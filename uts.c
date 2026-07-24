@@ -1340,13 +1340,23 @@ write_string(FILE *file, Object str) {
   put_char('"', file);
   for (i = 0; i < len; ++i) {
     Char c = s[i];
-    if (c == '"' || c == '\\')
-      put_char('\\', file);
-    if (isprint(c))
-      put_char(c, file);
-    else
-      if (fprintf(file, "\\%03o", c) < 0)
-        io_error(errno);
+    switch (c) {
+    case '\t': c = 't'; goto simple_escaped;
+    case '\n': c = 'n'; goto simple_escaped;
+    case '\r': c = 'r'; goto simple_escaped;
+    case '"':
+    case '\\':
+    simple_escaped:
+      put_char('\\', file); put_char(c, file);
+      break;
+    default:
+      if (isprint(c))
+        put_char(c, file);
+      else {
+        if (fprintf(file, "\\x%x;", c) < 0)
+          io_error(errno);
+      }
+    }
   }
   put_char('"', file);
 }

@@ -151,7 +151,7 @@
 	      (let ((char (read-char in-port)))
 		(cond
 		 ((eof-object? char)
-		  (read-error in-port "Unexpected EOF in escape sequence"))
+		  (read-error in-port "Unexpected EOF in string escape sequence"))
 		 ((assv char '((#\\ . #\\)
 			       (#\" . #\")
 			       (#\n . #\newline)
@@ -159,6 +159,20 @@
 			       (#\r . #\return)))
 		  => (lambda (pair)
 		       (loop (cons (cdr pair) prev-chars))))
+                 ((eqv? char #\x) ;; Hex escape sequence
+                  (let scanning ((pre '())
+                                 (c (read-char in-port)))
+                    (cond ((eof-object? c)
+                           (read-error in-port "Unexpected EOF in string escape sequence"))
+                          ((eq? c #\;) ;; End of hex sequence
+                           (let* ((code-str (list->string (reverse pre)))
+                                  (code (string->number code-str 16)))
+                             ;; (using string->number was kind of dodgy: allows numeric syntax frills)
+                             (if (and code (exact? code) (<= 0 code) (< code 256))
+                                 (loop (cons (integer->char code) prev-chars))
+                                 (read-error in-port "Invalid hex escape sequence in string"))))
+                          (else
+                           (scanning (cons c pre) (read-char in-port))))))
 		 (else (read-error in-port 
 				   "Unknown escape sequence in string")))))
 	     (else (loop (cons char prev-chars))))))))
