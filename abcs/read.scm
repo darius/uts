@@ -73,6 +73,72 @@
 	    n
 	    (read-error in-port "Expected a number" n))))
 
+    ;; (preceded by '#', '\\')
+    (define (read-char-literal in-port char)
+      (cond
+       ((eof-object? char)
+        (read-error in-port "Unterminated #\\ literal"))
+       ((and (char-alphabetic? char)
+	     (or (char-alphabetic? (peek-char in-port))
+                 (and (eqv? char #\x) (char-numeric? (peek-char in-port)))))
+        ;; TODO execrable logic shoehorning in the hex escape case
+	(let ((symbol (%read-atom in-port char)))
+	  (let ((table '(;; (backspace . #\backspace)
+                         ;; (escape . #\escape)
+			 (space . #\space)
+			 (tab . #\tab)
+			 (newline . #\newline)
+			 (return . #\return)
+			 )))
+	    (let ((pair (assq symbol table)))
+	      (cond
+               ((pair? pair) (cdr pair))
+               ((and (eqv? (string-ref (symbol->string symbol) 0) #\x)
+                     (string->number
+                      (string-append (string #\#) (symbol->string symbol))))
+                => (lambda (code)
+                     ;; Hex character code like #\x1f
+                     ;; (using string->number was kind of dodgy: allows numeric syntax frills)
+                     ;; TODO deduplicate wrt string literal parsing
+                     (if (and (exact? code) (<= 0 code) (< code 256))
+                         (integer->char code)
+                         (read-error in-port
+				     "Unknown character literal - #\\"
+				     symbol))))
+               (else
+		(read-error in-port 
+			    "Unknown character literal - #\\"
+			    symbol)))))))
+       (else char)))
+
+    ;; (preceded by '\\' inside a string literal)
+    (define (read-string-escape in-port char)
+      (cond
+       ((eof-object? char)
+	(read-error in-port "Unexpected EOF in string escape sequence"))
+       ((assv char '((#\\ . #\\)
+		     (#\" . #\")
+		     (#\n . #\newline)
+		     (#\t . #\tab)
+		     (#\r . #\return)))
+	=> cdr)
+       ((eqv? char #\x) ;; Hex escape sequence
+        (let scanning ((pre '())
+                       (c (read-char in-port)))
+          (cond ((eof-object? c)
+                 (read-error in-port "Unexpected EOF in string escape sequence"))
+                ((eq? c #\;) ;; End of hex sequence
+                 (let* ((code-str (list->string (reverse pre)))
+                        (code (string->number code-str 16)))
+                   ;; (using string->number was kind of dodgy: allows numeric syntax frills)
+                   (if (and code (exact? code) (<= 0 code) (< code 256))
+                       (integer->char code)
+                       (read-error in-port "Invalid hex escape sequence in string"))))
+                (else
+                 (scanning (cons c pre) (read-char in-port))))))
+       (else (read-error in-port 
+			 "Unknown escape sequence in string"))))
+
     (define (read-error port message . irritants)
       (set! %error-cont #f)
       (%complain "Read error" message irritants)
@@ -114,28 +180,8 @@
 	      (case next
 		((#\f #\F) #f)
 		((#\t #\T) #t)
-		((#\\)
-		 (let ((next (read-char in-port)))
-		   (if (and (char-alphabetic? next)
-			    (char-alphabetic? (peek-char in-port)))
-		       (let ((symbol (%read-atom in-port next)))
-			 (let ((table '(; (backspace . #\backspace)
-					; (escape . #\escape)
-					; (page . #\page)
-					(newline . #\newline)
-					(return . #\return)
-					(space . #\space)
-					(tab . #\tab)
-					)))
-			   (let ((pair (assq symbol table)))
-			     (if (pair? pair)
-				 (cdr pair)
-				 (read-error in-port 
-					     "Unknown character constant - #\\"
-					     symbol)))))
-		       next)))
-		(( #\( )	; vector constant
-		 (list->vector (read-list in-port next)))
+		(( #\\ ) (read-char-literal in-port (read-char in-port)))
+		(( #\( ) (list->vector (read-list in-port next)))
 		(else (read-error in-port "Unknown '#' read macro")))))))
 
     (install-read-macro #\"
@@ -148,33 +194,8 @@
 	     ((char=? char #\")
 	      (list->string (reverse prev-chars)))
 	     ((char=? char #\\)
-	      (let ((char (read-char in-port)))
-		(cond
-		 ((eof-object? char)
-		  (read-error in-port "Unexpected EOF in string escape sequence"))
-		 ((assv char '((#\\ . #\\)
-			       (#\" . #\")
-			       (#\n . #\newline)
-			       (#\t . #\tab)
-			       (#\r . #\return)))
-		  => (lambda (pair)
-		       (loop (cons (cdr pair) prev-chars))))
-                 ((eqv? char #\x) ;; Hex escape sequence
-                  (let scanning ((pre '())
-                                 (c (read-char in-port)))
-                    (cond ((eof-object? c)
-                           (read-error in-port "Unexpected EOF in string escape sequence"))
-                          ((eq? c #\;) ;; End of hex sequence
-                           (let* ((code-str (list->string (reverse pre)))
-                                  (code (string->number code-str 16)))
-                             ;; (using string->number was kind of dodgy: allows numeric syntax frills)
-                             (if (and code (exact? code) (<= 0 code) (< code 256))
-                                 (loop (cons (integer->char code) prev-chars))
-                                 (read-error in-port "Invalid hex escape sequence in string"))))
-                          (else
-                           (scanning (cons c pre) (read-char in-port))))))
-		 (else (read-error in-port 
-				   "Unknown escape sequence in string")))))
+	      (loop (cons (read-string-escape in-port (read-char in-port))
+                          prev-chars)))
 	     (else (loop (cons char prev-chars))))))))
 
     (install-read-macro #\'

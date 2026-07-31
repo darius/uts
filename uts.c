@@ -1396,7 +1396,7 @@ put_object(FILE *file, Object obj, Flag displaying) {
               break;
             default: 
               // FIXME: get reader to understand this
-              if (fprintf(file, "\\%03o", c) < 0)
+              if (fprintf(file, "x%x", c) < 0)
                 io_error(errno);
               break;
             }

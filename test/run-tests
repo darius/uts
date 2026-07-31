@@ -13,3 +13,6 @@ cd "$(dirname "$0")"
 ../uts r4rs-supplement.scm
 
 ../uts error-tests.scm
+
+../uts non-r4rs-tests.scm
+
