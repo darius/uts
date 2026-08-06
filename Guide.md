@@ -82,7 +82,10 @@ functions. (Maybe modern C gets this right! TODO find out)
 
 ### Additions
 
+Character and string literal syntax supports R7RS hex escape sequences.
+
 Added functions will be listed below. They're generally named with a `%` prefix.
+
 
 ## Error handling
 
