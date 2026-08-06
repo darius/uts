@@ -73,15 +73,44 @@
 	    n
 	    (read-error in-port "Expected a number" n))))
 
+    (define (delimiter? char)
+      ;; TODO I'm not actually sure what to consider a delimiter
+      (or (memv char '(#\space #\tab #\newline #\return #\; #\( #\) #\" #\' #\` #\, #\#))
+          (eof-object? char)))
+
+    (define (read-hex-char-code in-port prev-chars)
+      (let ((char (peek-char in-port)))
+        (cond ((and (char? char) (or (char-alphabetic? char) (char-numeric? char)))
+               (read-char in-port)
+               (read-hex-char-code in-port (cons char prev-chars)))
+              (else (list->string (reverse prev-chars))))))
+
+    (define (hex-char-code->code str)
+      (let ((code (string->number str 16)))  ;; N.B. always #f or exact integer
+        (and code (<= 0 code) (< code 256) code)))
+      
     ;; (preceded by '#', '\\')
     (define (read-char-literal in-port char)
       (cond
        ((eof-object? char)
         (read-error in-port "Unterminated #\\ literal"))
+       ((eqv? char #\x) ;; expect either just x or a hex escape sequence
+        (let ((str (read-hex-char-code in-port '())))
+          (cond ((string=? str "")
+                 (read-nonhex-char-literal in-port char))
+                ((hex-char-code->code str)
+                 => (lambda (code)
+                      (if (delimiter? (peek-char in-port))
+                          (integer->char code)
+                          (read-error in-port "Char literal must be followed by a delimiter"))))
+                (else (read-error in-port "Bad hex-escaped char literal" (string-append "#\\x" str))))))
+       (else
+        (read-nonhex-char-literal in-port char))))
+
+    (define (read-nonhex-char-literal in-port char)
+      (cond
        ((and (char-alphabetic? char)
-	     (or (char-alphabetic? (peek-char in-port))
-                 (and (eqv? char #\x) (char-numeric? (peek-char in-port)))))
-        ;; TODO execrable logic shoehorning in the hex escape case
+             (char-alphabetic? (peek-char in-port)))
 	(let ((symbol (%read-atom in-port char)))
 	  (let ((table '(;; (backspace . #\backspace)
                          ;; (escape . #\escape)
@@ -90,26 +119,15 @@
 			 (newline . #\newline)
 			 (return . #\return)
 			 )))
-	    (let ((pair (assq symbol table)))
-	      (cond
-               ((pair? pair) (cdr pair))
-               ((and (eqv? (string-ref (symbol->string symbol) 0) #\x)
-                     (string->number
-                      (string-append (string #\#) (symbol->string symbol))))
-                => (lambda (code)
-                     ;; Hex character code like #\x1f
-                     ;; (using string->number was kind of dodgy: allows numeric syntax frills)
-                     ;; TODO deduplicate wrt string literal parsing
-                     (if (and (exact? code) (<= 0 code) (< code 256))
-                         (integer->char code)
-                         (read-error in-port
-				     "Unknown character literal - #\\"
-				     symbol))))
-               (else
-		(read-error in-port 
-			    "Unknown character literal - #\\"
-			    symbol)))))))
-       (else char)))
+	    (cond ((assq symbol table) => cdr)
+                  (else
+		   (read-error in-port 
+			       "Unknown character literal - #\\"
+			       symbol))))))
+       (else
+        (if (delimiter? (peek-char in-port)) ;TODO
+            char
+            (read-error in-port "Char literal must be followed by a delimiter")))))
 
     ;; (preceded by '\\' inside a string literal)
     (define (read-string-escape in-port char)
@@ -123,19 +141,11 @@
 		     (#\r . #\return)))
 	=> cdr)
        ((eqv? char #\x) ;; Hex escape sequence
-        (let scanning ((pre '())
-                       (c (read-char in-port)))
-          (cond ((eof-object? c)
-                 (read-error in-port "Unexpected EOF in string escape sequence"))
-                ((eq? c #\;) ;; End of hex sequence
-                 (let* ((code-str (list->string (reverse pre)))
-                        (code (string->number code-str 16)))
-                   ;; (using string->number was kind of dodgy: allows numeric syntax frills)
-                   (if (and code (exact? code) (<= 0 code) (< code 256))
-                       (integer->char code)
-                       (read-error in-port "Invalid hex escape sequence in string"))))
-                (else
-                 (scanning (cons c pre) (read-char in-port))))))
+        (let* ((hex (read-hex-char-code in-port '()))
+               (delim (read-char in-port)))
+          (cond ((and (eqv? delim #\;) (hex-char-code->code hex)) => integer->char)
+                (else (read-error in-port "Bad hex-escaped char literal"
+                                  (string-append "#\\x" hex (if (char? delim) (string delim) "")))))))
        (else (read-error in-port 
 			 "Unknown escape sequence in string"))))
 

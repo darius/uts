@@ -8,6 +8,7 @@
 (SECTION 'char-literals)
 
 (test #\x41 itself #\A)
+(test "a\xf;\n\t\rz" string #\a (integer->char 15) #\newline #\tab #\return #\z)
 
 
 ;;;
